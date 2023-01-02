@@ -2,18 +2,20 @@ import tkinter as tk
 from tkinter import Canvas
 
 
-
-
 def main():
     root = tk.Tk()
-    root.geometry("200x300")
+
+    width = root.winfo_screenwidth()
+    height = root.winfo_screenheight()
+
     root.title("main")
+    root.geometry("200x300")
 
     rLabel = tk.Label(root, text="This is root window")
     rLabel.pack()
 
     top = tk.Toplevel()
-    top.geometry("200x50")
+    top.geometry("%dx%d" % (width, height))
     top.title("toplevel")
     top.attributes('-fullscreen', True)
     # top.attributes('-alpha', 0.5)
@@ -27,13 +29,12 @@ def main():
     # tLabel.pack()
 
     canvas = Canvas(top, bg='#add123', bd=0, highlightthickness=0)
+    canvas.config(width=width, height=height)  # fill screen
     # (x1,y1) top left corner and (x2, y2) bottom right corner
-    # canvas.create_rectangle(25, 75, 150, 140, fill='pink', outline='green', width=5)
-
-    canvas.create_rectangle(50, 22, 175, 90, fill='#add123', outline='red', width=5)
-    canvas.create_rectangle(50, 110, 300, 280, fill='#add123', outline='red', width=5)
-    canvas.create_rectangle(0, 0, 222, 155, fill='#add123', outline='blue', width=5)
-    canvas.pack(fill=tk.BOTH)
+    canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
+    canvas.create_rectangle(0, 0, 222, 155, fill='', outline='blue', width=2)
+    canvas.pack()
+    # canvas.pack(fill=tk.BOTH)
     root.mainloop()
 
 
