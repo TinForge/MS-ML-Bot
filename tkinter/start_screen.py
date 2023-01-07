@@ -3,25 +3,25 @@ import app
 
 
 class StartPage(Frame):
-    def __init__(self, master):
-        Frame.__init__(self, app.instance.window)
+    def __init__(self, frame):
+        Frame.__init__(self, frame)
         Label(self, text="This is the start page").pack(side="top", fill="x", pady=10)
-        Button(self, text="Open page one", command=lambda: master.switch_frame(PageOne)).pack()
-        Button(self, text="Open page two", command=lambda: master.switch_frame(PageTwo)).pack()
+        Button(self, text="Open page one", command=lambda: frame.switch_frame(PageOne)).pack()
+        Button(self, text="Open page two", command=lambda: frame.switch_frame(PageTwo)).pack()
 
 
 class PageOne(Frame):
-    def __init__(self, master):
-        Frame.__init__(self, app.instance.window)
+    def __init__(self, frame):
+        Frame.__init__(self, frame)
         Label(self, text="This is page one").pack(side="top", fill="x", pady=10)
-        Button(self, text="Return to start page", command=lambda: master.switch_frame(StartPage)).pack()
+        Button(self, text="Return to start page", command=lambda: frame.switch_frame(StartPage)).pack()
 
 
 class PageTwo(Frame):
-    def __init__(self, master):
-        Frame.__init__(self, app.instance.window)
+    def __init__(self, frame):
+        Frame.__init__(self, frame)
         Label(self, text="This is page two").pack(side="top", fill="x", pady=10)
-        Button(self, text="Return to start page", command=lambda: master.switch_frame(StartPage)).pack()
+        Button(self, text="Return to start page", command=lambda: frame.switch_frame(StartPage)).pack()
 
 
 def main():

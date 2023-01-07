@@ -9,7 +9,7 @@ class App():
         self.current_frame = None
 
     def switch_frame(self, frame_class):
-        new_frame = frame_class(self)
+        new_frame = frame_class(self.window)
         if self.current_frame is not None:
             self.current_frame.destroy()
         self.current_frame = new_frame
