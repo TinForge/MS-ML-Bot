@@ -1,4 +1,5 @@
 from tkinter import *
+import sv_ttk  # Windows 11 type theme
 import references
 
 instance = None
@@ -11,12 +12,11 @@ class Window():
         self.height = self.tk.winfo_screenheight()
         self.active_page = None
         self.tk.title("Maplestory ML Bot")
-        self.tk.geometry("300x100")
         self.tk.resizable(False, False)
         self.tk.eval('tk::PlaceWindow . center')  # Centers it in screen
         icon = PhotoImage(file=references.app_icon)
         self.tk.wm_iconphoto(False, icon)
-
+        sv_ttk.set_theme("light")
 
     def switch_page(self, page_class):
         if self.active_page is not None:

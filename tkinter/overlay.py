@@ -1,29 +1,26 @@
-import tkinter as tk
+from tkinter import *
 from tkinter import Canvas
+import window
 
 
-class Regular:
-    def __init__(self, instance: tk.Tk):
-        self.instance = instance
-        self.frame = tk.Frame(self.instance)
-        self.button1 = tk.Button(self.frame, text='New Window', width=25, command=self.new_window)
-        self.button1.pack()
-        self.button1 = tk.Button(self.frame, text='Close Window', width=25, command=self.close_window)
-        self.button1.pack()
-        self.frame.pack()
+class OverlayTester(Frame):
+    def __init__(self, app: window.Window):
+        self.instance = app
+        Frame.__init__(self, app.tk)
+        Button(self, text="Enable Overlay", command=self.new_window).pack()
+        Button(self, text="Disable Overlay", command=self.close_window).pack()
 
     def new_window(self):
-        self.overlay = Overlay(self.instance)
-
+        self.overlay = Overlay(self.instance.tk)
 
     def close_window(self):
         self.overlay.frame.destroy()
 
 
 class Overlay:
-    def __init__(self, instance: tk.Tk):
+    def __init__(self, instance: Tk):
         self.instance = instance
-        self.frame = tk.Toplevel()
+        self.frame = Toplevel()
 
         width = self.instance.winfo_screenwidth()
         height = self.instance.winfo_screenheight()
@@ -47,9 +44,9 @@ class Overlay:
 
 
 def main():
-    instance = tk.Tk()
-    Regular(instance)
-    instance.mainloop()
+    app = window.Window()
+    app.switch_page(OverlayTester)
+    app.tk.mainloop()
 
 
 
