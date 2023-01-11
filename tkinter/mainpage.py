@@ -9,7 +9,6 @@ overlay_visible = False
 maplestory_found = False
 
 
-
 class MainPage(Frame):
     def __init__(self, app: window.Window):
         self.app = app
@@ -36,7 +35,7 @@ class MainPage(Frame):
 class OverlayPanel(LabelFrame):
     def __init__(self, frame):
         LabelFrame.__init__(self, frame, text="Overlay", borderwidth=1, relief=GROOVE)
-        Label(self, text="Overlay Visible:").grid(row=1, column=0, padx=10, pady=10)
+        Label(self, text="Is Visible").grid(sticky=W, row=1, column=0, padx=10, pady=10)
         self.overlay_visible_text = Label(self)
         self.overlay_visible_text.grid(row=1, column=1, padx=10, pady=10)
         self.grid_columnconfigure((0, 1), weight=1, uniform="column")
@@ -51,9 +50,13 @@ class OverlayPanel(LabelFrame):
 class StatusPanel(LabelFrame):
     def __init__(self, frame):
         LabelFrame.__init__(self, frame, text="Status", borderwidth=1, relief=GROOVE)
-        Label(self, text="Maplestory Found:").grid(row=0, column=0, padx=10, pady=10)
+        Label(self, text="Window Found").grid(sticky=W, row=0, column=0, padx=10, pady=5)
         self.maplestory_found_text = Label(self)
-        self.maplestory_found_text.grid(row=0, column=1, padx=10, pady=10)
+        self.maplestory_found_text.grid(row=0, column=1, padx=10, pady=5)
+        Label(self, text="Window Input").grid(sticky=W, row=1, column=0, padx=10, pady=5)
+        self.maplestory_input_text = Label(self)
+        self.maplestory_input_text.grid(row=1, column=1, padx=10, pady=5)
+
         self.grid_columnconfigure((0, 1), weight=1, uniform="column")
         self.pack(fill=X)
         self.refresh()
@@ -61,6 +64,7 @@ class StatusPanel(LabelFrame):
     def refresh(self):
         global maplestory_found
         self.maplestory_found_text['text'] = maplestory_found
+        self.maplestory_input_text['text'] = maplestory_found
 
 
 def main():
