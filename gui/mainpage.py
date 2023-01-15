@@ -2,8 +2,10 @@ from tkinter import *
 from tkinter.ttk import *
 import PIL.Image
 import PIL.ImageTk
+
 import window
 import overlay
+
 
 overlay_visible = False
 maplestory_found = False

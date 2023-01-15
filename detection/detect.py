@@ -10,6 +10,7 @@ if hwnd == 0:
 else:
     print(hwnd)
 
+
 print("is showing", win32gui.IsWindowVisible(hwnd))
 print("is enabled", win32gui.IsWindowEnabled(hwnd))
 print("is iconic", win32gui.IsIconic(hwnd))

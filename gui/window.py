@@ -1,5 +1,6 @@
 from tkinter import *
 import sv_ttk  # Windows 11 type theme
+
 import references
 
 instance = None
