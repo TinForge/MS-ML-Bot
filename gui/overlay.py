@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import Canvas
 
 import window
+from detection import detect
 
 
 class OverlayTester(Frame):
