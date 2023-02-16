@@ -5,7 +5,7 @@ import PIL.ImageTk
 
 import window
 import overlay
-from detection import detect
+import logic
 
 
 overlay_visible = False
@@ -66,14 +66,18 @@ class StatusPanel(LabelFrame):
 
     def refresh(self):
         global maplestory_found
-        self.maplestory_found_text['text'] = str(detect.IsMaplestoryFound())
+        self.maplestory_found_text['text'] = str(logic.isMapleFound)
         self.maplestory_input_text['text'] = maplestory_found
 
 
 def main():
     window.instance = window.Window()
     window.instance.switch_page(MainPage)
-    window.instance.tk.mainloop()
+    # window.instance.tk.mainloop()
+    LOOP_ACTIVE = True
+    while LOOP_ACTIVE:
+        logic.update()
+        window.instance.tk.update()
 
 
 if __name__ == "__main__":
