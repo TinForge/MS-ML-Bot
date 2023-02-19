@@ -1,6 +1,7 @@
 import win32gui
 import time
-
+import win32com
+import win32com.client
 
 windowName = "MapleLegends (Nov 6 2022)"
 
@@ -35,6 +36,8 @@ def ShowMaple():
     if IsMapleFound() is False:
         return
     else:
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.SendKeys('%')
         win32gui.SetForegroundWindow(MapleWindow())
 
 
