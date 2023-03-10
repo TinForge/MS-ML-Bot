@@ -52,7 +52,6 @@ def main():
 
     print("is enabled", is_ms_enabled())
     show_ms()
-    time.sleep(1)
     print(get_ms_rect())  # (0, 0, 800, 600)
 
 

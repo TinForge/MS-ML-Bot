@@ -13,4 +13,3 @@ def update():
     isMapleFound = detect.is_ms_found()
     isMapleEnabled = detect.is_ms_enabled()
     mapleRect = detect.get_ms_rect()
-

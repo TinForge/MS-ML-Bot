@@ -6,21 +6,6 @@ import window
 from detection import detect
 
 
-
-class OverlayTester(Frame):
-    def __init__(self, app: window.Window):
-        self.instance = app
-        Frame.__init__(self, app.tk)
-        Button(self, text="Enable Overlay", command=self.new_window).pack()
-        Button(self, text="Disable Overlay", command=self.close_window).pack()
-
-    def new_window(self):
-        self.overlay = Overlay(self.instance.tk)
-
-    def close_window(self):
-        self.overlay.frame.destroy()
-
-
 class Overlay:
     def __init__(self, instance: Tk):
         self.instance = instance
@@ -41,24 +26,21 @@ class Overlay:
         self.canvas.config(width=self.width, height=self.height)  # fill screen
 
         # WIP
-        self.rects = set()
-        self.shapes = set()
-
-        self.refresh()  # Tester
+        self.shapes = set()  # declare data structure
+        self.set_rects(None)
 
 
-    def refresh(self):
+    def set_rects(self, new_rects):  # rects needs to be a struct with xywh
         for s in self.shapes:
             self.canvas.delete(s)
         self.shapes.clear()
 
-        # rects needs to be a struct with xywh
+        self.rects = new_rects
 
         for s in self.rects:
             rect = self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='green', width=2)
             self.shapes.add(rect)
         self.canvas.pack()
-
 
         # (x1,y1) top left corner and (x2, y2) bottom right corner
         # self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
@@ -66,11 +48,25 @@ class Overlay:
         # self.canvas.pack()
 
 
+
+class OverlayTester(Frame):
+    def __init__(self, app: window.Window):
+        self.instance = app
+        Frame.__init__(self, app.tk)
+        Button(self, text="Enable Overlay", command=self.new_window).pack()
+        Button(self, text="Disable Overlay", command=self.close_window).pack()
+
+    def new_window(self):
+        self.overlay = Overlay(self.instance.tk)
+
+    def close_window(self):
+        self.overlay.frame.destroy()
+
+
 def main():
     app = window.Window()
     app.switch_page(OverlayTester)
     app.tk.mainloop()
-
 
 
 if __name__ == '__main__':
