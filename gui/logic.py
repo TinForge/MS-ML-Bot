@@ -1,3 +1,4 @@
+#  Reads values from detect
 from detection import detect
 
 isMapleFound = False
@@ -9,7 +10,7 @@ def update():
     global isMapleFound
     global isMapleEnabled
     global mapleRect
-    isMapleFound = detect.IsMapleFound()
-    isMapleEnabled = detect.IsMapleEnabled()
-    mapleRect = detect.GetMapleRect()
+    isMapleFound = detect.is_ms_found()
+    isMapleEnabled = detect.is_ms_enabled()
+    mapleRect = detect.get_ms_rect()
 
