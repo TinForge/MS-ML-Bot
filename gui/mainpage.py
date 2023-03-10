@@ -1,3 +1,4 @@
+#  tkinter main frame
 from tkinter import *
 from tkinter.ttk import *
 import PIL.Image

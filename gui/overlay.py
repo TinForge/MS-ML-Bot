@@ -1,8 +1,10 @@
+#  tkinter overlay frame
 from tkinter import *
 from tkinter import Canvas
 
 import window
 from detection import detect
+
 
 
 class OverlayTester(Frame):
@@ -38,8 +40,11 @@ class Overlay:
         self.canvas = Canvas(self.frame, bg='#add123', bd=0, highlightthickness=0)
         self.canvas.config(width=self.width, height=self.height)  # fill screen
 
+        # WIP
         self.rects = set()
         self.shapes = set()
+
+        self.refresh()  # Tester
 
 
     def refresh(self):
@@ -47,16 +52,18 @@ class Overlay:
             self.canvas.delete(s)
         self.shapes.clear()
 
+        # rects needs to be a struct with xywh
+
         for s in self.rects:
-            rect = self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
+            rect = self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='green', width=2)
             self.shapes.add(rect)
+        self.canvas.pack()
+
 
         # (x1,y1) top left corner and (x2, y2) bottom right corner
         # self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
         # self.canvas.create_rectangle(0, 0, 222, 155, fill='', outline='blue', width=2)
-        self.canvas.pack()
-
-
+        # self.canvas.pack()
 
 
 def main():

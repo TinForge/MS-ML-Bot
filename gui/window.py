@@ -1,3 +1,4 @@
+#  Main tkinter app window
 from tkinter import *
 import sv_ttk  # Windows 11 type theme
 
