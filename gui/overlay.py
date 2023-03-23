@@ -6,6 +6,14 @@ import window
 from detection import detect
 
 
+class Rect:
+    def __init__(self, x1, y1, x2, y2):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+
+
 class Overlay:
     def __init__(self, instance: Tk):
         self.instance = instance
@@ -27,20 +35,29 @@ class Overlay:
 
         # WIP
         self.shapes = set()  # declare data structure
-        self.set_rects(None)
+
+        self.display_rects((Rect(1, 1, 2, 2)))
 
 
-    def set_rects(self, new_rects):  # rects needs to be a struct with xywh
+
+    def display_rects(self, new_rects: list(Rect)):  # rects needs to be a list of rects
+        self.rects = new_rects
+        self.clear_shapes()
+        self.render_shapes()
+
+
+    def clear_shapes(self):
         for s in self.shapes:
             self.canvas.delete(s)
         self.shapes.clear()
 
-        self.rects = new_rects
-
-        for s in self.rects:
-            rect = self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='green', width=2)
-            self.shapes.add(rect)
+    def render_shapes(self):
+        r: Rect
+        for r in self.rects:
+            self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline='green', width=2))
         self.canvas.pack()
+
+
 
         # (x1,y1) top left corner and (x2, y2) bottom right corner
         # self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
