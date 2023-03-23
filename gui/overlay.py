@@ -14,7 +14,12 @@ class Rect:
         self.y2 = y2
 
 
+test_rects = [Rect(100, 100, 200, 200), Rect(300, 300, 400, 400), Rect(500, 500, 600, 600)]
+
+
 class Overlay:
+
+
     def __init__(self, instance: Tk):
         self.instance = instance
         self.frame = Toplevel()
@@ -36,12 +41,14 @@ class Overlay:
         # WIP
         self.shapes = set()  # declare data structure
 
-        self.display_rects((Rect(1, 1, 2, 2)))
+        self.display_rects(test_rects)
 
 
 
-    def display_rects(self, new_rects: list(Rect)):  # rects needs to be a list of rects
+
+    def display_rects(self, new_rects: list):  # rects needs to be a list of rects
         self.rects = new_rects
+        # print(self.rects)
         self.clear_shapes()
         self.render_shapes()
 
