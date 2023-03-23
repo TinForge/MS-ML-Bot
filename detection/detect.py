@@ -4,7 +4,7 @@ import time
 import win32com
 import win32com.client
 
-windowName = "MapleLegends (Nov 6 2022)"
+windowName = "MapleLegends (Mar 12 2023)"
 
 
 def get_ms_window():
