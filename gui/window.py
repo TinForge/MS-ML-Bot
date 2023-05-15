@@ -6,7 +6,7 @@ import references
 instance = None
 
 
-class Window():
+class Window:
     def __init__(self):
         self.tk: Tk = Tk()
         self.width = self.tk.winfo_screenwidth()
