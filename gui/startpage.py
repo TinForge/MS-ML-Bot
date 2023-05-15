@@ -20,20 +20,6 @@ class StartPage(Frame):
         Label(self, text="Developed by Wei").pack(pady=10)
 
 
-class PageOne(Frame):
-    def __init__(self, app: window.Window):
-        Frame.__init__(self, app.tk)
-        Label(self, text="This is page one").pack(pady=10)
-        Button(self, text="Return to start page", command=lambda: app.switch_page(StartPage)).pack()
-
-
-class PageTwo(Frame):
-    def __init__(self, app: window.Window):
-        Frame.__init__(self, app.tk)
-        Label(self, text="This is page two").pack(fill="x", pady=10)
-        Button(self, text="Return to start page", command=lambda: app.switch_page(StartPage)).pack()
-
-
 def main():
     window.instance = window.Window()
     window.instance.switch_page(StartPage)
@@ -43,3 +29,20 @@ def main():
 if __name__ == "__main__":
     print("Launching Start Page...")
     main()
+
+
+# -------------------------------------------------------------
+
+
+class TestPageOne(Frame):
+    def __init__(self, app: window.Window):
+        Frame.__init__(self, app.tk)
+        Label(self, text="This is page one").pack(pady=10)
+        Button(self, text="Return to start page", command=lambda: app.switch_page(StartPage)).pack()
+
+
+class TestPageTwo(Frame):
+    def __init__(self, app: window.Window):
+        Frame.__init__(self, app.tk)
+        Label(self, text="This is page two").pack(fill="x", pady=10)
+        Button(self, text="Return to start page", command=lambda: app.switch_page(StartPage)).pack()

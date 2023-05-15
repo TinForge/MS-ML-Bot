@@ -1,8 +1,10 @@
 from tkinter import *
 from tkinter import Canvas
-
+#
 import window
-from detection import detect
+from mapletools import tools
+#
+is_visible = False
 
 
 class OverlayTester(Frame):
@@ -23,10 +25,10 @@ class Overlay:
     def __init__(self, instance: Tk):
         self.instance = instance
         self.frame = Toplevel()
-
+        #
         self.width = self.instance.winfo_screenwidth()
         self.height = self.instance.winfo_screenheight()
-
+        #
         self.frame.geometry("%dx%d" % (self.width, self.height))
         self.frame.title("Overlay")
         self.frame.attributes('-fullscreen', True)
@@ -34,12 +36,13 @@ class Overlay:
         self.frame.wm_attributes('-transparentcolor', '#add123')
         self.frame.wm_attributes("-topmost", True)
         self.frame.wm_attributes("-disabled", True)
-
+        #
         self.canvas = Canvas(self.frame, bg='#add123', bd=0, highlightthickness=0)
         self.canvas.config(width=self.width, height=self.height)  # fill screen
-
+        #
         self.rects = set()
         self.shapes = set()
+        self.refresh()
 
 
     def refresh(self):
@@ -52,10 +55,9 @@ class Overlay:
             self.shapes.add(rect)
 
         # (x1,y1) top left corner and (x2, y2) bottom right corner
-        # self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
-        # self.canvas.create_rectangle(0, 0, 222, 155, fill='', outline='blue', width=2)
+        self.canvas.create_rectangle(50, 110, 300, 280, fill='', outline='red', width=2)
+        self.canvas.create_rectangle(0, 0, 222, 155, fill='', outline='blue', width=2)
         self.canvas.pack()
-
 
 
 

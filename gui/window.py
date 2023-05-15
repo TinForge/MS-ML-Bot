@@ -1,8 +1,8 @@
-from tkinter import *
+from tkinter import Tk, PhotoImage
 import sv_ttk  # Windows 11 type theme
-
+#
 import references
-
+#
 instance = None
 
 
