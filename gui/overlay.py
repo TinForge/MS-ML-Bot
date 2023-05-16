@@ -2,8 +2,10 @@
 from tkinter import *
 from tkinter import Canvas
 #
-import window
+from gui import window
 from mapletools import tools
+#
+from inference import detect
 #
 is_visible = False
 
@@ -44,7 +46,8 @@ class Overlay:
         self.shapes = set()  # declare data structure
         #
         self.display_rects(test_rects)
-
+        #
+        self.inferencer = detect.Inferencer()
 
     def display_rects(self, new_rects: list):
         self.rects = new_rects
@@ -59,8 +62,13 @@ class Overlay:
     def render_shapes(self):
         r: Rect
         for r in self.rects:
-            self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=2))
+            self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=4))
         self.canvas.pack()
+
+    def run_inferencer(self):
+        print("RUNNING INFERENCER")
+        rects = self.inferencer.run()
+        self.display_rects(rects)
 
 
 

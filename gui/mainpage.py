@@ -8,7 +8,7 @@ import PIL.ImageTk
 import window
 import overlay
 #
-from mapletools import values,tools
+from mapletools import values, tools
 
 
 # Frame layout for main page
@@ -20,6 +20,7 @@ class MainPage(Frame):
         #
         Label(self, text="Main Page", font='bold').pack(pady=10)
         Button(self, text="Toggle Overlay", command=lambda: self.toggle_overlay()).pack()
+        Button(self, text="Inference", command=lambda: self.test_inference()).pack()
         #
         self.overlayGraphic = None
         self.overlayPanel = OverlayPanel(self)
@@ -34,6 +35,14 @@ class MainPage(Frame):
             self.overlayGraphic.frame.destroy()
 
         self.overlayPanel.refresh()
+
+
+    def test_inference(self):
+        if overlay.is_visible:
+            self.overlayGraphic.run_inferencer()
+            # self.after(500, self.test_inference)
+        else:
+            print("Overlay needs to be visible")
 
 
 # Panel layout for Overlay variables

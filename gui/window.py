@@ -1,7 +1,7 @@
 from tkinter import Tk, PhotoImage
 import sv_ttk  # Windows 11 type theme
 #
-import references
+from gui import references
 #
 instance = None
 
