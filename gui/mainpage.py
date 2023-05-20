@@ -39,8 +39,9 @@ class MainPage(Frame):
 
     def test_inference(self):
         if overlay.is_visible:
-            self.overlayGraphic.run_inferencer()
-            # self.after(500, self.test_inference)
+            if values.isWindowActive:
+                self.overlayGraphic.run_inferencer()
+            self.after(200, self.test_inference)
         else:
             print("Overlay needs to be visible")
 
@@ -72,9 +73,9 @@ class StatusPanel(LabelFrame):
         self.window_found_display = Label(self)
         self.window_found_display.grid(row=0, column=1, padx=10, pady=5)
         #
-        Label(self, text="Window Visible").grid(sticky=W, row=1, column=0, padx=10, pady=5)
-        self.window_visible_display = Label(self)
-        self.window_visible_display.grid(row=1, column=1, padx=10, pady=5)
+        Label(self, text="Window Active").grid(sticky=W, row=1, column=0, padx=10, pady=5)
+        self.window_active_display = Label(self)
+        self.window_active_display.grid(row=1, column=1, padx=10, pady=5)
         #
         self.grid_columnconfigure((0, 1), weight=1, uniform="column")
         self.pack(fill=X)
@@ -82,7 +83,7 @@ class StatusPanel(LabelFrame):
 
     def refresh(self):
         self.window_found_display['text'] = str(values.isWindowFound)
-        self.window_visible_display['text'] = str(values.isWindowEnabled)
+        self.window_active_display['text'] = str(values.isWindowActive)
         self.after(500, self.refresh)
 
 
@@ -103,7 +104,7 @@ class TestPanel(LabelFrame):
         #
 
     def TEST(self):
-        tools.ShowWindow()
+        tools.show_window()
 
 
     def refresh(self):

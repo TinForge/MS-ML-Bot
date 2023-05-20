@@ -2,63 +2,65 @@ import win32gui
 import time
 import win32com
 import win32com.client
+import ctypes
+from ctypes import wintypes
 
 windowName = "MapleLegends (Mar 12 2023)"
 
 
 # 
-def GetWindow():
+def try_get_window():
     return win32gui.FindWindow(None, windowName)
 
 
-def IsWindowFound():
-    if GetWindow() == 0:
+def is_window_found():
+    if try_get_window() == 0:
         return False
     else:
         return True
 
 
-def IsWindowVisible():
-    if IsWindowFound() is False:
+def is_window_active():
+    hwnd = ctypes.windll.user32.GetForegroundWindow() 
+    length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+    buff = ctypes.create_unicode_buffer(length + 1)
+    ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
+    # print(buff.value)
+    if buff.value == windowName:
+        return True
+    else:
         return False
-    if False:
-        if win32gui.IsWindowEnabled(GetWindow()) == 0:
-            return False
-        else:
-            return True
-    if True:
-        if win32gui.IsWindowVisible(GetWindow()) == 0:
-            return False
-        else:
-            return True
 
 
-def GetRect():
-    if IsWindowFound() is False:
+def get_window_rect():
+    if is_window_found() is False:
         return False
     else:
-        return win32gui.GetWindowRect(GetWindow())
+        return win32gui.GetWindowRect(try_get_window())
 
 
-def ShowWindow():
-    if IsWindowFound() is False:
+def show_window():
+    if is_window_found() is False:
         return
     else:
         shell = win32com.client.Dispatch("WScript.Shell")  # not sure if helps
         shell.SendKeys('%')
-        win32gui.SetForegroundWindow(GetWindow())
+        # win32gui.SetForegroundWindow(try_get_window())
+        ctypes.windll.user32.SetForegroundWindow(try_get_window()) 
+
 
 
 
 def main():
-    if IsWindowFound() is False:
+    if is_window_found() is False:
         print("Maplestory not found")
         exit()
 
-    print("is enabled", IsWindowVisible())
-    ShowWindow()
+    show_window()
     time.sleep(1)
-    print(GetRect())  # (0, 0, 800, 600)
+    print(get_window_rect())  # (0, 0, 800, 600)
+
+
 
 
 if __name__ == "__main__":
