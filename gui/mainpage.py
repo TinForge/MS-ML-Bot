@@ -41,7 +41,7 @@ class MainPage(Frame):
         if overlay.is_visible:
             if values.isWindowActive:
                 self.overlayGraphic.run_inferencer()
-            self.after(200, self.test_inference)
+            self.after(100, self.test_inference)
         else:
             print("Overlay needs to be visible")
 
