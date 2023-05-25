@@ -5,6 +5,7 @@ from tkinter.ttk import *
 import PIL.Image
 import PIL.ImageTk
 #
+import references
 import window
 import overlay
 #
@@ -26,6 +27,7 @@ class MainPage(Frame):
         self.overlayPanel = OverlayPanel(self)
         self.statusPanel = StatusPanel(self)
         self.testPanel = TestPanel(self)
+        #
 
     def toggle_overlay(self):
         overlay.is_visible = not overlay.is_visible
@@ -35,7 +37,6 @@ class MainPage(Frame):
             self.overlayGraphic.frame.destroy()
 
         self.overlayPanel.refresh()
-
 
     def test_inference(self):
         if overlay.is_visible:
@@ -51,17 +52,16 @@ class OverlayPanel(LabelFrame):
     def __init__(self, frame):
         LabelFrame.__init__(self, frame, text="Overlay", borderwidth=1, relief=GROOVE)
         #
-        Label(self, text="Is Visible").grid(sticky=W, row=1, column=0, padx=10, pady=10)
+        self.overlay_visible = Label(self, image=references.red_icon)
+        self.overlay_visible.grid(row=1, column=0, padx=15, pady=5)
+        Label(self, text="Is Visible", font=references.var_font).grid(sticky=W, row=1, column=1, padx=0, pady=0)
         #
-        self.overlay_visible_text = Label(self)
-        self.overlay_visible_text.grid(row=1, column=1, padx=10, pady=10)
-        #
-        self.grid_columnconfigure((0, 1), weight=1, uniform="column")
+        self.grid_columnconfigure(1, weight=1, uniform="column")
         self.pack(fill=X)
         self.refresh()
 
     def refresh(self):
-        self.overlay_visible_text['text'] = str(overlay.is_visible)
+        self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
 
 
 # Panel layout for Status variables
@@ -69,21 +69,22 @@ class StatusPanel(LabelFrame):
     def __init__(self, frame):
         LabelFrame.__init__(self, frame, text="Status", borderwidth=1, relief=GROOVE)
         #
-        Label(self, text="Window Found").grid(sticky=W, row=0, column=0, padx=10, pady=5)
-        self.window_found_display = Label(self)
-        self.window_found_display.grid(row=0, column=1, padx=10, pady=5)
+
+        self.window_found = Label(self, image=references.red_icon)
+        self.window_found.grid(row=0, column=0, padx=15, pady=5)
+        Label(self, text="Window Found", font=references.var_font).grid(sticky=W, row=0, column=1, padx=0, pady=0)
         #
-        Label(self, text="Window Active").grid(sticky=W, row=1, column=0, padx=10, pady=5)
-        self.window_active_display = Label(self)
-        self.window_active_display.grid(row=1, column=1, padx=10, pady=5)
+        self.window_active = Label(self, image=references.red_icon)
+        self.window_active.grid(row=1, column=0, padx=15, pady=5)
+        Label(self, text="Window Active", font=references.var_font).grid(sticky=W, row=1, column=1, padx=0, pady=0)
         #
-        self.grid_columnconfigure((0, 1), weight=1, uniform="column")
+        self.grid_columnconfigure(1, weight=1, uniform="column")
         self.pack(fill=X)
         self.refresh()
 
     def refresh(self):
-        self.window_found_display['text'] = str(values.isWindowFound)
-        self.window_active_display['text'] = str(values.isWindowActive)
+        self.window_found.configure(image=(references.red_icon, references.green_icon)[values.isWindowFound])
+        self.window_active.configure(image=(references.red_icon, references.green_icon)[values.isWindowActive])
         self.after(500, self.refresh)
 
 
@@ -98,7 +99,7 @@ class TestPanel(LabelFrame):
         self.window_rect_display = Label(self)
         self.window_rect_display.grid(row=1, column=1, padx=10, pady=5)
         #
-        self.grid_columnconfigure((0), weight=1, uniform="column")
+        self.grid_columnconfigure((0, 1), weight=1, uniform="column")
         self.pack(fill=X)
         self.refresh()
         #
@@ -117,6 +118,7 @@ class TestPanel(LabelFrame):
 
 def main():
     window.instance = window.Window()
+    references.initialize_images()
     window.instance.switch_page(MainPage)
     window.instance.tk.protocol("WM_DELETE_WINDOW", on_closing)
 

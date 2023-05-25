@@ -19,6 +19,7 @@ class Window:
         self.tk.wm_iconphoto(False, icon)
         sv_ttk.set_theme("light")
 
+
     def switch_page(self, page_class):
         if self.active_page is not None:
             self.active_page.destroy()

@@ -4,9 +4,9 @@ from gui import overlay
 from mapletools import values
 
 
-class Inferencer:
+class Model:
     def __init__(self):
-        self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='inference/maple_weights.pt')
+        self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='yolov5/weights.pt')
         self.model.cuda()
         # self.model.cpu()
         self.model.conf = 0.75  # confidence threshold (0-1)
@@ -14,19 +14,18 @@ class Inferencer:
         # self.model.imgsz = 1280  # doesn't help
 
     def simple_run(self):
-        im = ImageGrab.grab()
+        im = ImageGrab.grab()  # Data will not be as accurate if image set is not cropped
         results = self.model(im)
         results.print()  # prints general info
         print(results.pandas().xyxy[0])  # prints each element
+        # results.save()
 
 
     def run(self):
         rects = []
-        #
         # im = ImageGrab.grab()
         im = ImageGrab.grab(bbox=values.windowRect)  # Provides rect of maplestory window, however the rects need to be localized back to window coords
         results = self.model(im)
-        # results.save()
         labels, cord_thres = results.xyxy[0][:, -1].cpu().numpy(), results.xyxy[0][:, :-1].cpu().numpy()
         results.print()
         # print(*labels)
@@ -57,7 +56,7 @@ class Inferencer:
 
 
 def main():
-    i = Inferencer()
+    i = Model()
     i.simple_run()
     # rects = i.run()
     # print(*rects)

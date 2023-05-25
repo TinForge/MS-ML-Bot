@@ -5,7 +5,7 @@ from tkinter import Canvas
 from gui import window
 from mapletools import tools
 #
-from inference import detect
+from yolov5 import detection
 #
 is_visible = False
 
@@ -47,7 +47,7 @@ class Overlay:
         #
         self.display_rects(test_rects)
         #
-        self.inferencer = detect.Inferencer()
+        self.model = detection.Model()
 
     def display_rects(self, new_rects: list):
         self.rects = new_rects
@@ -67,7 +67,7 @@ class Overlay:
 
     def run_inferencer(self):
         print("RUNNING INFERENCER")
-        rects = self.inferencer.run()
+        rects = self.model.run()
         self.display_rects(rects)
 
 
