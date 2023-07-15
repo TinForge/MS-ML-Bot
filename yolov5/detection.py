@@ -2,6 +2,7 @@ import torch
 from PIL import ImageGrab
 from gui import overlay
 from mapletools import values
+import threading
 
 
 class Model:
@@ -52,7 +53,17 @@ class Model:
             r = overlay.Rect(cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3], color)
             rects.append(r)
 
+        self.is_thread_running = False
         return rects
+
+    is_thread_running = False
+
+    def threaded_run(self):
+        if not self.is_thread_running:
+            self.is_thread_running = True
+            thread_inference = threading.Thread(target=self.run)
+            thread_inference.start()
+
 
 
 def main():

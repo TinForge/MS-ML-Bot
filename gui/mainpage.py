@@ -21,8 +21,7 @@ class MainPage(Frame):
         Frame.__init__(self, app.tk)
         #
         Label(self, text="Main Page", font='bold').pack(pady=10)
-        Button(self, text="Toggle Overlay", command=lambda: self.toggle_overlay()).pack()
-        Button(self, text="Inference", command=lambda: self.test_inference()).pack()
+        Button(self, text="Inference", command=lambda: self.run_inference()).pack()
         #
         self.overlayGraphic = None
         self.overlayPanel = OverlayPanel(self)
@@ -30,20 +29,12 @@ class MainPage(Frame):
         self.testPanel = TestPanel(self)
         #
 
-    def toggle_overlay(self):
-        overlay.is_visible = not overlay.is_visible
-        if overlay.is_visible:
-            self.overlayGraphic = overlay.Overlay(self.app.tk)
-        else:
-            self.overlayGraphic.frame.destroy()
-
-        self.overlayPanel.refresh()
-
-    def test_inference(self):
+    # Need to move this to OverlayPanel or somewhere
+    def run_inference(self):
         if overlay.is_visible:
             if values.isWindowActive:
-                self.overlayGraphic.run_inferencer()
-            self.after(100, self.test_inference)
+                self.overlayGraphic.run_inferencer() 
+            self.after(100, self.run_inference)
         else:
             print("Overlay needs to be visible")
 
@@ -56,10 +47,21 @@ class OverlayPanel(LabelFrame):
         self.overlay_visible = Label(self, image=references.red_icon)
         self.overlay_visible.grid(row=1, column=0, padx=15, pady=5)
         Label(self, text="Is Visible", font=references.var_font).grid(sticky=W, row=1, column=1, padx=0, pady=0)
+        Button(self, text="Toggle Overlay", command=lambda: self.toggle_overlay()).grid(sticky=E, row=1, column=2, padx=0, pady=0)
         #
-        self.grid_columnconfigure(1, weight=1, uniform="column")
+        self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
         self.refresh()
+
+
+    def toggle_overlay(self):
+        overlay.is_visible = not overlay.is_visible
+        if overlay.is_visible:
+            self.overlayGraphic = overlay.Overlay(window.instance.tk)
+        else:
+            self.overlayGraphic.frame.destroy()
+        self.refresh()
+
 
     def refresh(self):
         self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
@@ -103,7 +105,7 @@ class TestPanel(LabelFrame):
     def __init__(self, frame):
         LabelFrame.__init__(self, frame, text="Test", borderwidth=1, relief=GROOVE)
         #
-        Button(self, text="TEST", command=lambda: self.TEST()).grid(sticky=W, row=0, column=0, padx=10, pady=5)
+        Button(self, text="Force Display", command=lambda: self.TEST()).grid(sticky=W, row=0, column=0, padx=10, pady=5)
         #
         Label(self, text="Rect").grid(sticky=W, row=1, column=0, padx=10, pady=5)
         self.window_rect_display = Label(self)
@@ -137,7 +139,7 @@ def main():
         values.update()
         window.instance.tk.update_idletasks()
         window.instance.tk.update()
-
+        
     # -------------------------------------------
 
 
