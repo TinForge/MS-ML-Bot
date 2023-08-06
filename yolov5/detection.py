@@ -11,7 +11,7 @@ class Model:
         self.model.cuda()
         # self.model.cpu()
         self.model.conf = 0.75  # confidence threshold (0-1)
-        self.model.iou = 0.5  # NMS IoU threshold (0-1)  
+        self.model.iou = 0.5  # NMS IoU threshold (0-1)
         # self.model.imgsz = 1280  # doesn't help
 
     def simple_run(self):
@@ -20,7 +20,6 @@ class Model:
         results.print()  # prints general info
         print(results.pandas().xyxy[0])  # prints each element
         # results.save()
-
 
     def run(self):
         rects = []
@@ -63,7 +62,6 @@ class Model:
             self.is_thread_running = True
             thread_inference = threading.Thread(target=self.run)
             thread_inference.start()
-
 
 
 def main():

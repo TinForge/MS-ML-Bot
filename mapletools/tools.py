@@ -1,4 +1,5 @@
 import win32gui
+import win32con
 import time
 import win32com
 import win32com.client
@@ -37,6 +38,13 @@ def get_window_rect():
         return False
     else:
         return win32gui.GetWindowRect(try_get_window())
+
+
+def set_window_rect():
+    if is_window_found() is False:
+        return False
+    else:
+        win32gui.SetWindowPos(try_get_window(), 0, 0, 0, 0, 0, win32con.SWP_NOZORDER | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
 
 
 def show_window():

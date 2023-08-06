@@ -1,13 +1,9 @@
 #  tkinter overlay frame
 from tkinter import *
 from tkinter import Canvas
-#
 from gui import window
 from mapletools import tools
-#
 from yolov5 import detection
-#
-is_visible = False
 
 
 # Data container for rect bounds
@@ -22,6 +18,9 @@ class Rect:
 
 # Test set of rects
 test_rects = [Rect(100, 100, 200, 200, "green"), Rect(300, 300, 400, 400, "red"), Rect(500, 500, 600, 600, "purple")]
+
+
+# --------------------------------------------
 
 
 class Overlay:
@@ -71,26 +70,42 @@ class Overlay:
         self.display_rects(rects)
 
 
-
 class OverlayTester(Frame):
     def __init__(self, app: window.Window):
         self.instance = app
         Frame.__init__(self, app.tk)
-        Button(self, text="Enable Overlay", command=self.new_window).pack()
-        Button(self, text="Disable Overlay", command=self.close_window).pack()
+        Button(self, text="Enable Overlay", command=enable_overlay).pack()
+        Button(self, text="Disable Overlay", command=disable_overlay).pack()
 
-    def new_window(self):
-        self.overlay = Overlay(self.instance.tk)
 
-    def close_window(self):
-        self.overlay.frame.destroy()
+def enable_overlay():
+    global instance, is_visible
+    instance = Overlay(window.instance.tk)
+    is_visible = True
+
+
+def disable_overlay():    
+    global instance, is_visible
+    instance.frame.destroy()
+    is_visible = False
+
+
+def toggle_overlay():
+    global is_visible
+    if is_visible:
+        disable_overlay()
+    else:
+        enable_overlay()
 
 
 def main():
-    app = window.Window()
-    app.switch_page(OverlayTester)
-    app.tk.mainloop()
+    window.instance = window.Window()
+    window.instance.switch_page(OverlayTester)
+    window.instance.tk.mainloop()
 
 
 if __name__ == '__main__':
     main()
+
+instance: Overlay = None
+is_visible = False

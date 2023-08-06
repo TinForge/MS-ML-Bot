@@ -1,14 +1,9 @@
 #  tkinter main frame
 from tkinter import *
 from tkinter.ttk import *
-#
 import PIL.Image
 import PIL.ImageTk
-#
-import references
-import window
-import overlay
-#
+from gui import references, window, overlay
 from mapletools import values, tools
 from windowtools import savedata
 
@@ -23,7 +18,6 @@ class MainPage(Frame):
         Label(self, text="Main Page", font='bold').pack(pady=10)
         Button(self, text="Inference", command=lambda: self.run_inference()).pack()
         #
-        self.overlayGraphic = None
         self.overlayPanel = OverlayPanel(self)
         self.statusPanel = StatusPanel(self)
         self.testPanel = TestPanel(self)
@@ -33,6 +27,7 @@ class MainPage(Frame):
     def run_inference(self):
         if overlay.is_visible:
             if values.isWindowActive:
+                # overlay.
                 self.overlayGraphic.run_inferencer() 
             self.after(100, self.run_inference)
         else:
@@ -52,14 +47,11 @@ class OverlayPanel(LabelFrame):
         self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
         self.refresh()
+        print(overlay.is_visible)
 
 
     def toggle_overlay(self):
-        overlay.is_visible = not overlay.is_visible
-        if overlay.is_visible:
-            self.overlayGraphic = overlay.Overlay(window.instance.tk)
-        else:
-            self.overlayGraphic.frame.destroy()
+        overlay.toggle_overlay()
         self.refresh()
 
 
@@ -105,7 +97,7 @@ class TestPanel(LabelFrame):
     def __init__(self, frame):
         LabelFrame.__init__(self, frame, text="Test", borderwidth=1, relief=GROOVE)
         #
-        Button(self, text="Force Display", command=lambda: self.TEST()).grid(sticky=W, row=0, column=0, padx=10, pady=5)
+        Button(self, text="Show Window", command=lambda: self.show_window()).grid(sticky=W, row=0, column=0, padx=10, pady=5)
         #
         Label(self, text="Rect").grid(sticky=W, row=1, column=0, padx=10, pady=5)
         self.window_rect_display = Label(self)
@@ -116,9 +108,8 @@ class TestPanel(LabelFrame):
         self.refresh()
         #
 
-    def TEST(self):
-        tools.show_window()
-
+    def show_window(self):
+        tools.set_window_rect()
 
     def refresh(self):
         self.window_rect_display['text'] = str(values.windowRect)
@@ -126,20 +117,17 @@ class TestPanel(LabelFrame):
 
 
 
-
-
 def main():
     window.instance = window.Window()
-    references.initialize_images()
     window.instance.switch_page(MainPage)
     window.instance.tk.protocol("WM_DELETE_WINDOW", on_closing)
+    references.initialize_images()
 
     # -------------------------------------------
     while window.instance is not None:
         values.update()
         window.instance.tk.update_idletasks()
         window.instance.tk.update()
-        
     # -------------------------------------------
 
 

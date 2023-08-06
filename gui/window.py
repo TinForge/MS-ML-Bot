@@ -1,9 +1,6 @@
 from tkinter import Tk, PhotoImage
 import sv_ttk  # Windows 11 type theme
-#
 from gui import references
-#
-instance = None
 
 
 class Window:
@@ -25,6 +22,9 @@ class Window:
             self.active_page.destroy()
         self.active_page = page_class(self)
         self.active_page.pack()
+
+
+instance: Window = None
 
 
 def main():

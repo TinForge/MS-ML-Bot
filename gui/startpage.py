@@ -3,7 +3,6 @@ from tkinter import *
 from tkinter.ttk import *
 import PIL.Image
 import PIL.ImageTk
-
 import window
 import mainpage
 import references
