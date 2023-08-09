@@ -4,7 +4,7 @@ import os
 
 class TextFile():
     def __init__(self, file_name, default_value):
-        self.file_path = './windowtools/' + file_name + '.txt'
+        self.file_path = './tools/persistent/' + file_name + '.txt'
         if (self.read() == ''):
             self.save(default_value)
 
@@ -21,7 +21,7 @@ class TextFile():
             f.write(value)
 
 
-window_name = TextFile('window name', 'Window Name')
+window_name = TextFile('WINDOW NAME', '(Window Name)')
 
 
 def main():

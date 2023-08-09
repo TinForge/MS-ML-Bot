@@ -1,7 +1,7 @@
 import torch
 from PIL import ImageGrab
-from gui import overlay
-from mapletools import values
+from tools import overlay
+from tools import values
 import threading
 
 

@@ -2,7 +2,6 @@
 from tkinter import *
 from tkinter import Canvas
 from gui import window
-from mapletools import tools
 from yolov5 import detection
 
 

@@ -1,11 +1,12 @@
 #  tkinter start frame
 from tkinter import *
 from tkinter.ttk import *
+
 import PIL.Image
 import PIL.ImageTk
-import window
-import mainpage
-import references
+
+from gui import window, references
+from gui.page import main_page
 
 
 class StartPage(Frame):
@@ -13,11 +14,12 @@ class StartPage(Frame):
         app.tk.geometry("300x450")
         Frame.__init__(self, app.tk)
         Label(self, text="Welcome to Maplestory ML Bot", font='bold').pack(pady=20)
-        Button(self, text="Launch", command=lambda: app.switch_page(mainpage.MainPage)).pack()
+        Button(self, text="Launch", command=lambda: app.switch_page(main_page.MainPage)).pack()
         self.photo = PIL.ImageTk.PhotoImage(PIL.Image.open(references.mushroom_image))
         Label(self, image=self.photo).pack(fill=BOTH, anchor="center")
         Label(self, text="V0.1 - 08/01/2023").pack(pady=10)
         Label(self, text="Developed by Wei").pack(pady=10)
+
 
 
 def main():

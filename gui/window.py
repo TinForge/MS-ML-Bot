@@ -1,5 +1,7 @@
 from tkinter import Tk, PhotoImage
 import sv_ttk  # Windows 11 type theme
+import sys
+
 from gui import references
 
 
@@ -15,7 +17,7 @@ class Window:
         icon = PhotoImage(file=references.app_icon)
         self.tk.wm_iconphoto(False, icon)
         sv_ttk.set_theme("light")
-
+        references.initialize_images()
 
     def switch_page(self, page_class):
         if self.active_page is not None:
@@ -27,9 +29,19 @@ class Window:
 instance: Window = None
 
 
+def on_closing():
+    print("Closing window")
+    global instance
+    instance.tk.quit()
+    instance.tk.destroy()
+    instance = None
+    sys.exit()
+
+
 def main():
     global instance
     instance = Window()
+    instance.tk.protocol("WM_DELETE_WINDOW", on_closing)
     instance.tk.mainloop()
 
 
