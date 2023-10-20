@@ -18,13 +18,11 @@ class OverlayPanel(LabelFrame):
         #
         self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
-        self.refresh()
-        print(overlay.is_visible)
+        # print(overlay.is_visible)
 
 
     def toggle_overlay(self):
         overlay.toggle_overlay()
-        self.refresh()
 
 
     def refresh(self):

@@ -28,6 +28,11 @@ class Window:
         self.active_page.pack()
 
 
+    def refresh(self):
+        self.active_page.refresh()
+
+
+
 instance: Window = None
 
 

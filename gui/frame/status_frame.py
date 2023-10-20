@@ -28,13 +28,13 @@ class StatusPanel(LabelFrame):
         #
         self.grid_columnconfigure(1, weight=1, uniform="column")
         self.pack(fill=X)
-        self.refresh()
 
-    def refresh(self):
-        self.window_found.configure(image=(references.red_icon, references.green_icon)[values.isWindowFound])
-        self.window_active.configure(image=(references.red_icon, references.green_icon)[values.isWindowActive])
-        # self.after(500, self.refresh)
 
     def on_window_name_change(self, event):
         save_data.window_name.save(self.window_name.get())
         window_functions.windowName = self.window_name.get()
+
+
+    def refresh(self):
+        self.window_found.configure(image=(references.red_icon, references.green_icon)[values.isWindowFound])
+        self.window_active.configure(image=(references.red_icon, references.green_icon)[values.isWindowActive])

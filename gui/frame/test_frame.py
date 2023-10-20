@@ -18,12 +18,12 @@ class TestPanel(LabelFrame):
         #
         self.grid_columnconfigure((0, 1), weight=1, uniform="column")
         self.pack(fill=X)
-        self.refresh()
         #
+
 
     def show_window(self):
         window_functions.set_rect()
 
+
     def refresh(self):
         self.window_rect_display['text'] = str(values.windowRect)
-        # self.after(500, self.refresh)

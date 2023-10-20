@@ -21,6 +21,9 @@ class StartPage(Frame):
         Label(self, text="V0.1 - 08/01/2023").pack(pady=10)
         Label(self, text="Developed by Wei").pack(pady=10)
 
+    def refresh(self):
+        print("to implement")
+
 
 
 def main():
