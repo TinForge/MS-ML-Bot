@@ -40,11 +40,18 @@ def on_closing():
     sys.exit()
 
 
-def main():
+def main():  # This one loops itself
     global instance
     instance = Window()
     instance.tk.protocol("WM_DELETE_WINDOW", on_closing)
     instance.tk.mainloop()
+
+
+def main2():  # This one does NOT loop itself
+    global instance
+    instance = Window()
+    instance.tk.protocol("WM_DELETE_WINDOW", on_closing)
+    # instance.tk.mainloop()
 
 
 if __name__ == "__main__":

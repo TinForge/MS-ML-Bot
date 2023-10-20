@@ -1,8 +1,7 @@
-#  tkinter main frame
+# GUI layout for main page
+
 from tkinter import *
 from tkinter.ttk import *
-
-# GUI layout for main page
 
 from gui import window
 from gui.frame import overlay_frame, status_frame, test_frame
