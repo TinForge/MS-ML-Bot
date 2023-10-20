@@ -5,6 +5,7 @@ from tkinter.ttk import *
 from gui import window
 from gui.frame import overlay_frame, status_frame, test_frame
 from tools import values
+from tools import overlay
 
 
 # Frame layout for main page
@@ -24,9 +25,9 @@ class MainPage(Frame):
 
     # Need to move this to OverlayPanel or somewhere
     def run_inference(self):
-        if overlay_frame.is_visible:
+        if overlay.is_visible:
             if values.isWindowActive:
-                self.overlayGraphic.run_inferencer() 
+                overlay.instance.run_inferencer() 
             self.after(100, self.run_inference)
         else:
             print("Overlay needs to be visible")
