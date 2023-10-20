@@ -1,3 +1,5 @@
+# GUI Section for Status
+
 from tkinter import *
 from tkinter.ttk import *
 

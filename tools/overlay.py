@@ -1,4 +1,5 @@
-#  tkinter overlay frame
+#  Renders overlay rects of captured classifications
+
 from tkinter import *
 from tkinter import Canvas
 from gui import window

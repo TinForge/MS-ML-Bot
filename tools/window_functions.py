@@ -1,3 +1,5 @@
+# Functions for using Maplestory Window Applications
+
 import win32gui
 import win32con
 import win32com

@@ -1,3 +1,5 @@
+# Controls the ML Inferencing Model
+
 import torch
 from PIL import ImageGrab
 from tools import overlay

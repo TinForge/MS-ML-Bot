@@ -1,3 +1,5 @@
+# Runs GUI, Threading, and Logic together
+
 from tkinter import *
 from tkinter.ttk import *
 
@@ -19,7 +21,7 @@ def loop():
 
 def main():
     window.instance = window.Window()
-    window.instance.switch_page(main_page.MainPage)
+    window.instance.switch_page(main_page.MainPage)  # Bootstrap into main page
     loop()
 
 

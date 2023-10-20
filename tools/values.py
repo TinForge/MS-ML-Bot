@@ -1,3 +1,5 @@
+# Global values
+
 from tools import window_functions
 
 isWindowFound = False

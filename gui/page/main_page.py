@@ -2,13 +2,14 @@
 from tkinter import *
 from tkinter.ttk import *
 
+# GUI layout for main page
+
 from gui import window
 from gui.frame import overlay_frame, status_frame, test_frame
 from tools import values
 from tools import overlay
 
 
-# Frame layout for main page
 class MainPage(Frame):
     def __init__(self, app: window.Window):
         self.app = app

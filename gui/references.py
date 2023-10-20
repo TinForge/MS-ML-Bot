@@ -1,3 +1,5 @@
+# All assets referenced here
+
 import PIL.Image
 import PIL.ImageTk
 

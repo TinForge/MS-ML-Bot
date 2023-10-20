@@ -1,4 +1,5 @@
-#  tkinter start frame
+# GUI layout for start page
+
 from tkinter import *
 from tkinter.ttk import *
 
