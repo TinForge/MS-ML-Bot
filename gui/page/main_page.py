@@ -33,7 +33,6 @@ class MainPage(Frame):
             print("Overlay needs to be visible")
 
     def refresh(self):
-        print("REFRESHING")
         self.overlayPanel.refresh()
         self.statusPanel.refresh()
         self.testPanel.refresh()
