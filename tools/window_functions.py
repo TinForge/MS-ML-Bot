@@ -6,7 +6,7 @@ import win32com
 import win32com.client
 import ctypes
 
-windowName = "MapleLegends (Mar 12 2023)"
+windowName = "MapleLegends (Sep 10 2023)"
 
 
 def get_instance():

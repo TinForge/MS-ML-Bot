@@ -45,6 +45,7 @@ def main():
     # -------------------------------------------
     while window.instance is not None:
         values.update()
+        window.instance.refresh()
         window.instance.tk.update_idletasks()
         window.instance.tk.update()
     # -------------------------------------------

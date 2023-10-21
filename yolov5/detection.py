@@ -30,6 +30,7 @@ class Model:
         results = self.model(im)
         labels, cord_thres = results.xyxy[0][:, -1].cpu().numpy(), results.xyxy[0][:, :-1].cpu().numpy()
         results.print()
+        # results.save()
         # print(*labels)
         # print(*cord_thres)
 
