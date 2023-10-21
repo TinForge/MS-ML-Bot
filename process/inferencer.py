@@ -1,6 +1,7 @@
 import multiprocessing
 import ctypes
 import time
+import threading
 
 from yolov5 import detection
 
@@ -23,4 +24,18 @@ class InferenceProcess(multiprocessing.Process):
         while True:
             time.sleep(1)  # Adjustable
             self.model.simple_run()  # ######
+            self.inference_done.set()
+
+
+class InferenceThread(threading.Thread):
+    def __init__(self, inference_done):
+        threading.Thread.__init__(self)  # execute the base constructor
+        self.data = multiprocessing.Array(Result, [test_rects[0], test_rects[1], test_rects[2]])
+        self.inference_done = inference_done
+        self.model = detection.Model()  # ######
+
+    def run(self):
+        while True:
+            time.sleep(1)  # Adjustable
+            self.model.run()  # ######
             self.inference_done.set()

@@ -10,23 +10,30 @@ from tools import values
 from process import decision, inferencer
 
 import multiprocessing
+import threading
 
 from yolov5 import detection
 
 
 def meowwwww():
-    model = detection.Model()  # #####
 
     # Run ML
     inference_done = multiprocessing.Event()
-    inference_process = inferencer.InferenceProcess(inference_done)
-    inference_process.start()  #
+    # inference_process = inferencer.InferenceProcess(inference_done)
+    # inference_process.start()  #
+
+    inference_thread = inferencer.InferenceThread(inference_done)
+    inference_thread.start()  #
 
     # Bot Logic
-    decision_process = decision.DecisionProcess(inference_done)
-    decision_process.start()
+    # decision_process = decision.DecisionProcess(inference_done)
+    # decision_process.start()
+
+    decision_thread = decision.DecisionThread(inference_done)
+    decision_thread.start()
 
 
+    # model = detection.Model()  # #####
     while window.instance is not None:
         # model.simple_run()  # #####
         values.update()
@@ -34,8 +41,10 @@ def meowwwww():
         window.instance.tk.update_idletasks()
         window.instance.tk.update()
 
-    inference_process.kill()
-    decision_process.kill()
+    # inference_process.kill()
+    # decision_process.kill()
+    inference_thread.kill()
+    decision_thread.kill()
 
 
 def main():
