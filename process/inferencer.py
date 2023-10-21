@@ -24,4 +24,3 @@ class InferenceProcess(multiprocessing.Process):
             time.sleep(1)  # Adjustable
             self.model.simple_run()  # ######
             self.inference_done.set()
-            # print("Performed Inference")
