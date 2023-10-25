@@ -36,5 +36,5 @@ class StatusPanel(LabelFrame):
 
 
     def refresh(self):
-        self.window_found.configure(image=(references.red_icon, references.green_icon)[values.isWindowFound])
-        self.window_active.configure(image=(references.red_icon, references.green_icon)[values.isWindowActive])
+        self.window_found.configure(image=(references.red_icon, references.green_icon)[values.window_found])
+        self.window_active.configure(image=(references.red_icon, references.green_icon)[values.window_active])

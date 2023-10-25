@@ -4,9 +4,9 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import window
-from gui.frame import overlay_frame, status_frame, test_frame
+from gui.frame import control_frame, overlay_frame, status_frame, test_frame
 from tools import values
-from tools import overlay
+from process import detection
 
 
 class MainPage(Frame):
@@ -18,23 +18,21 @@ class MainPage(Frame):
         Label(self, text="Main Page", font='bold').pack(pady=10)
         Button(self, text="Inference", command=lambda: self.run_inference()).pack()
         #
-        self.overlayPanel = overlay_frame.OverlayPanel(self)
         self.statusPanel = status_frame.StatusPanel(self)
+        self.controlPanel = control_frame.ControlPanel(self)
+        self.overlayPanel = overlay_frame.OverlayPanel(self)
         self.testPanel = test_frame.TestPanel(self)
         #
 
     # Need to move this to OverlayPanel or somewhere
     def run_inference(self):
-        if overlay.is_visible:
-            if values.isWindowActive:
-                overlay.instance.run_inferencer() 
-            self.after(100, self.run_inference)
-        else:
-            print("Overlay needs to be visible")
+        detection.instance.is_running = not detection.instance.is_running
+        print("toggling")
 
     def refresh(self):
-        self.overlayPanel.refresh()
         self.statusPanel.refresh()
+        self.controlPanel.refresh()
+        self.overlayPanel.refresh()
         self.testPanel.refresh()
 
 

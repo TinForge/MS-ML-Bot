@@ -3,33 +3,16 @@
 from tkinter import *
 from tkinter import Canvas
 from gui import window
-from yolov5 import detection
-
-
-# Data container for rect bounds
-class Rect:
-    def __init__(self, x1, y1, x2, y2, color):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-        self.color = color
-
-
-# Test set of rects
-test_rects = [Rect(100, 100, 200, 200, "green"), Rect(300, 300, 400, 400, "red"), Rect(500, 500, 600, 600, "purple")]
-
-
-# --------------------------------------------
+from process import data
 
 
 class Overlay:
     def __init__(self, instance: Tk):
-        self.instance = instance
+        self.tk = instance
         self.frame = Toplevel()
         #
-        self.width = self.instance.winfo_screenwidth()
-        self.height = self.instance.winfo_screenheight()
+        self.width = self.tk.winfo_screenwidth()
+        self.height = self.tk.winfo_screenheight()
         #
         self.frame.geometry("%dx%d" % (self.width, self.height))
         self.frame.title("Overlay")
@@ -44,9 +27,8 @@ class Overlay:
         #
         self.shapes = set()  # declare data structure
         #
-        self.display_rects(test_rects)
-        #
-        self.model = detection.Model()
+        self.display_rects(data.test_rects)  # Display default
+
 
     def display_rects(self, new_rects: list):
         self.rects = new_rects
@@ -59,23 +41,18 @@ class Overlay:
         self.shapes.clear()
 
     def render_shapes(self):
-        r: Rect
+        r: data.Rect
         for r in self.rects:
             self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=4))
         self.canvas.pack()
 
-    def run_inferencer(self):
-        print("RUNNING INFERENCER")
-        rects = self.model.run()
-        self.display_rects(rects)
 
-
-class OverlayTester(Frame):
-    def __init__(self, app: window.Window):
-        self.instance = app
-        Frame.__init__(self, app.tk)
-        Button(self, text="Enable Overlay", command=enable_overlay).pack()
-        Button(self, text="Disable Overlay", command=disable_overlay).pack()
+def toggle_overlay():
+    global is_visible
+    if is_visible:
+        disable_overlay()
+    else:
+        enable_overlay()
 
 
 def enable_overlay():
@@ -87,25 +64,27 @@ def enable_overlay():
 def disable_overlay():    
     global instance, is_visible
     instance.frame.destroy()
+    instance = None
     is_visible = False
 
 
-def toggle_overlay():
-    global is_visible
-    if is_visible:
-        disable_overlay()
-    else:
-        enable_overlay()
+# ----------------------------------------------
+
+# class OverlayTester(Frame):
+#     def __init__(self, app: window.Window):
+#         Frame.__init__(self, app.tk)
+#         Button(self, text="Enable Overlay", command=enable_overlay).pack()
+#         Button(self, text="Disable Overlay", command=disable_overlay).pack()
 
 
-def main():
-    window.instance = window.Window()
-    window.instance.switch_page(OverlayTester)
-    window.instance.tk.mainloop()
+# def main():
+#     window.instance = window.Window()
+#     window.instance.switch_page(OverlayTester)
+#     window.instance.tk.mainloop()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 instance: Overlay = None
 is_visible = False

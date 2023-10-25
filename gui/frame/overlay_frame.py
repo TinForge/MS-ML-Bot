@@ -5,6 +5,7 @@ from tkinter.ttk import *
 
 from gui import references
 from tools import overlay
+from tools import values
 
 
 class OverlayPanel(LabelFrame):
@@ -27,3 +28,7 @@ class OverlayPanel(LabelFrame):
 
     def refresh(self):
         self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
+
+        if overlay.instance is not None:
+            if values.detections is not None:
+                overlay.instance.display_rects(values.detections)

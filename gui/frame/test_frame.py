@@ -26,4 +26,4 @@ class TestPanel(LabelFrame):
 
 
     def refresh(self):
-        self.window_rect_display['text'] = str(values.windowRect)
+        self.window_rect_display['text'] = str(values.window_rect)
