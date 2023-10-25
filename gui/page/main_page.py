@@ -4,9 +4,8 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import window
-from gui.frame import control_frame, overlay_frame, status_frame, test_frame
+from gui.panel import status_panel, control_panel, debug_panel, utility_panel, test_panel
 from tools import values
-from process import detection
 
 
 class MainPage(Frame):
@@ -15,25 +14,20 @@ class MainPage(Frame):
         self.app.tk.geometry("300x450")
         Frame.__init__(self, app.tk)
         #
-        Label(self, text="Main Page", font='bold').pack(pady=10)
-        Button(self, text="Inference", command=lambda: self.run_inference()).pack()
+        # Label(self, text="Main Page", font='bold').pack(pady=10)
+        # Button(self, text="Inference", command=lambda: self.run_inference()).pack()
         #
-        self.statusPanel = status_frame.StatusPanel(self)
-        self.controlPanel = control_frame.ControlPanel(self)
-        self.overlayPanel = overlay_frame.OverlayPanel(self)
-        self.testPanel = test_frame.TestPanel(self)
-        #
+        self.statusPanel = status_panel.StatusPanel(self)
+        self.controlPanel = control_panel.ControlPanel(self)
+        self.debugPanel = debug_panel.DebugPanel(self)
+        self.utilityPanel = utility_panel.UtilityPanel(self)
 
-    # Need to move this to OverlayPanel or somewhere
-    def run_inference(self):
-        detection.instance.is_running = not detection.instance.is_running
-        print("toggling")
 
     def refresh(self):
         self.statusPanel.refresh()
         self.controlPanel.refresh()
-        self.overlayPanel.refresh()
-        self.testPanel.refresh()
+        self.debugPanel.refresh()
+        self.utilityPanel.refresh()
 
 
 def main():

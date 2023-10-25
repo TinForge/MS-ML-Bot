@@ -7,13 +7,13 @@ from gui import window
 from gui.page import main_page
 from tools import values
 
-from process import decision, detection
+from process import detection, decision
 
 
 def run():
     # Run ML
-    detection_thread = detection.DetectionThread()
-    detection_thread.start()
+    # detection_thread = detection.DetectionThread()
+    # detection_thread.start()
 
     # Bot Logic
     decision_thread = decision.DecisionThread()
