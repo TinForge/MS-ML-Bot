@@ -29,11 +29,11 @@ def filter_mobs_by_height(rects, player, threshold):
     return mob_instances
 
 
-def find_closest_mob(detections, player):
+def find_closest_mob(rects, player):
     closest_distance = float('inf')
     closest_rect = None
 
-    for rect in detections:
+    for rect in rects:
         if rect.name == "Mob":
             distance = compare_distance(rect, player)
             if distance < closest_distance:
@@ -43,8 +43,8 @@ def find_closest_mob(detections, player):
     return closest_rect
 
 
-def find_rect_by_class(detections, class_name):
-    for rect in detections:
+def find_rect_by_class(rects, class_name):
+    for rect in rects:
         if rect.name == class_name:
             return rect
     return None

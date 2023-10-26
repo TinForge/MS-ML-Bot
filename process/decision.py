@@ -3,8 +3,9 @@ import time
 import threading
 from tools import values
 from process import data
-from tools import keyboard
+from tools import key
 from random import randrange
+import keyboard
 
 
 class DecisionThread(threading.Thread):
@@ -15,11 +16,16 @@ class DecisionThread(threading.Thread):
         instance = self
 
         self.is_running = False
-        self.key = keyboard.VK_MENU
+        self.key = key.VK_MENU
 
 
     def run(self):
         while window.instance is not None:
+            event = keyboard.read_event()
+            if event.event_type == keyboard.KEY_DOWN and event.name == "`":
+                print("Toggling Decision Process")
+                self.is_running = not self.is_running
+
             if self.is_running is False:
                 time.sleep(0.01)  # Adjustable
             else:
@@ -28,7 +34,11 @@ class DecisionThread(threading.Thread):
 
 
     def calculate(self):
+        if values.detected_instances is None:
+            return
+
         instances = values.detected_instances
+
         player: data.Rect = data.find_rect_by_class(instances, "Player")
         monster: data.Rect = None
 
@@ -53,14 +63,14 @@ class DecisionThread(threading.Thread):
             y_distance = monster.center_y - player.center_y
 
             action = "nothing"
-            direction = keyboard.VK_MENU
+            direction = key.VK_MENU
 
             if x_distance < 0:
                 action = "left"
-                direction = keyboard.VK_LEFT
+                direction = key.VK_LEFT
             elif x_distance > 0:
                 action = "right"
-                direction = keyboard.VK_RIGHT
+                direction = key.VK_RIGHT
 
 
             if abs(x_distance) > 150:  # Too far
@@ -85,7 +95,7 @@ class DecisionThread(threading.Thread):
 
             elif abs(x_distance) < 50:  # Too close
                 action = "move farther"
-                self.move(keyboard.VK_RIGHT if direction == keyboard.VK_LEFT else keyboard.VK_LEFT)
+                self.move(key.VK_RIGHT if direction == key.VK_LEFT else key.VK_LEFT)
 
 
             # if action == "left" and self.key is not keyboard.VK_LEFT:
@@ -115,48 +125,48 @@ class DecisionThread(threading.Thread):
 
 
     def move(self, direction):
-        keyboard.PressKey(direction)
+        key.PressKey(direction)
         time.sleep(0.25)
-        keyboard.ReleaseKey(direction)
+        key.ReleaseKey(direction)
 
     def move_jump(self, direction):
-        keyboard.PressKey(direction)
-        keyboard.PressKey(keyboard.VK_MENU)
+        key.PressKey(direction)
+        key.PressKey(key.VK_MENU)
         time.sleep(0.25)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
-        keyboard.ReleaseKey(direction)
+        key.ReleaseKey(key.VK_MENU)
+        key.ReleaseKey(direction)
 
     def move_jump_attack(self, direction):
-        keyboard.PressKey(direction)
-        keyboard.PressKey(keyboard.VK_MENU)
+        key.PressKey(direction)
+        key.PressKey(key.VK_MENU)
         time.sleep(0.25)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
-        keyboard.ReleaseKey(direction)
-        keyboard.PressKey(keyboard.VK_CONTROL)
+        key.ReleaseKey(key.VK_MENU)
+        key.ReleaseKey(direction)
+        key.PressKey(key.VK_CONTROL)
         time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_CONTROL)
+        key.ReleaseKey(key.VK_CONTROL)
 
     def attack(self, direction):
-        keyboard.PressKey(direction)
+        key.PressKey(direction)
         time.sleep(0.01)
-        keyboard.ReleaseKey(direction)
+        key.ReleaseKey(direction)
 
-        keyboard.PressKey(keyboard.VK_CONTROL)
+        key.PressKey(key.VK_CONTROL)
         time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_CONTROL)
+        key.ReleaseKey(key.VK_CONTROL)
 
     def jump_attack(self, direction):
-        keyboard.PressKey(keyboard.VK_MENU)
+        key.PressKey(key.VK_MENU)
         time.sleep(0.25)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
+        key.ReleaseKey(key.VK_MENU)
 
-        keyboard.PressKey(direction)
+        key.PressKey(direction)
         time.sleep(0.01)
-        keyboard.ReleaseKey(direction)
+        key.ReleaseKey(direction)
 
-        keyboard.PressKey(keyboard.VK_CONTROL)
+        key.PressKey(key.VK_CONTROL)
         time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_CONTROL)
+        key.ReleaseKey(key.VK_CONTROL)
 
 
 instance: DecisionThread = None
