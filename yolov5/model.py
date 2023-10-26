@@ -9,8 +9,12 @@ from process import data
 class Model:
     def __init__(self):
         self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='yolov5/weights.pt')
-        self.model.cuda()
-        # self.model.cpu()
+
+        if torch.cuda.is_available():
+            self.model.cuda()
+        else:
+            self.model.cpu()
+
         # self.model.imgsz = 1280  # doesn't help
         self.model.conf = 0.75  # confidence threshold (0-1)
         self.model.iou = 0.5  # NMS IoU threshold (0-1)
