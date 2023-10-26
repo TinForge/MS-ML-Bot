@@ -15,7 +15,7 @@ decision_active = False
 
 overlay_visible = False
 
-detected_models = None  # Set by detection.py
+detected_instances = None  # Set by detection.py
 debug_player = None  # 
 debug_monster = None  # 
 debug_action = "Null"

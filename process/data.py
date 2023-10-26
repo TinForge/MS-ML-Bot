@@ -19,7 +19,17 @@ def compare_distance(rect1, rect2):
     return distance
 
 
-def find_closest_monster(detections, player):
+def find_mob_instances(rects):
+    mob_instances = [obj for obj in rects if obj.name == "Mob"]
+    return mob_instances
+
+
+def filter_mobs_by_height(rects, player, threshold):
+    mob_instances = [obj for obj in rects if abs(obj.center_y - player.center_y) < threshold]
+    return mob_instances
+
+
+def find_closest_mob(detections, player):
     closest_distance = float('inf')
     closest_rect = None
 

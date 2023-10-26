@@ -23,7 +23,7 @@ class DetectionThread(threading.Thread):
             else:
                 time.sleep(0.01)  # Adjustable
                 detections = self.model.run(True, False)
-                values.detected_models = detections
+                values.detected_instances = detections
 
 
 instance: DetectionThread = None

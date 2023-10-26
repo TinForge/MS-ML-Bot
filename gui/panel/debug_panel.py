@@ -32,8 +32,8 @@ class DebugPanel(LabelFrame):
 
     def refresh(self):
         if overlay.instance is not None:
-            if values.detected_models is not None:
-                overlay.instance.display_rects(values.detected_models)
+            if values.detected_instances is not None:
+                overlay.instance.display_rects(values.detected_instances)
 
         self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
         if values.debug_monster is not None:
