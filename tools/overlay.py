@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter import Canvas
 from gui import window
 from process import data
+from tools import values
 
 
 class Overlay:
@@ -43,7 +44,16 @@ class Overlay:
     def render_shapes(self):
         r: data.Rect
         for r in self.rects:
-            self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=4))
+            self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=1))
+
+        if values.debug_player is not None:
+            d = values.debug_player
+            self.shapes.add(self.canvas.create_rectangle(d.x1, d.y1, d.x2, d.y2, fill='', outline=d.color, width=3))
+        if values.debug_monster is not None:
+            d = values.debug_monster
+            self.shapes.add(self.canvas.create_rectangle(d.x1, d.y1, d.x2, d.y2, fill='', outline=d.color, width=3))
+
+
         self.canvas.pack()
 
 

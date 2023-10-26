@@ -19,12 +19,11 @@ class DetectionThread(threading.Thread):
     def run(self):
         while window.instance is not None:
             if self.is_running is False:
-                time.sleep(0.1)  # Adjustable
+                time.sleep(0.01)  # Adjustable
             else:
-                print("running detect")
-                time.sleep(0.1)  # Adjustable
+                time.sleep(0.01)  # Adjustable
                 detections = self.model.run(True, False)
-                values.detections = detections
+                values.detected_models = detections
 
 
 instance: DetectionThread = None
