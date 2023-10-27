@@ -5,9 +5,8 @@ from tkinter.ttk import *
 
 from gui import window
 from gui.page import main_page
-from tools import values
-
-from process import detection, decision
+from data import values
+from process import calculations, detection, bot
 
 
 def run():
@@ -16,8 +15,12 @@ def run():
     detection_thread.start()
 
     # Bot Logic
-    decision_thread = decision.DecisionThread()
+    decision_thread = calculations.CalculationThread()
     decision_thread.start()
+
+    # Bot Logic
+    bot_thread = bot.BotThread()
+    bot_thread.start()
 
     # GUI
     while window.instance is not None:

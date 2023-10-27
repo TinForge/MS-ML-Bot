@@ -1,10 +1,10 @@
 # Functions for using Maplestory Window Applications
 
+import ctypes
 import win32gui
 import win32con
 import win32com
 import win32com.client
-import ctypes
 
 windowName = "MapleLegends (Sep 10 2023)"
 

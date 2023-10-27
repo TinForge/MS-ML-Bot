@@ -3,8 +3,7 @@
 from tkinter import *
 from tkinter import Canvas
 from gui import window
-from process import data
-from tools import values
+from data import values, rects
 
 
 class Overlay:
@@ -28,7 +27,7 @@ class Overlay:
         #
         self.shapes = set()  # declare data structure
         #
-        self.display_rects(data.test_rects)  # Display default
+        self.display_rects(rects.test_rects)  # Display default
 
 
     def display_rects(self, new_rects: list):
@@ -42,15 +41,15 @@ class Overlay:
         self.shapes.clear()
 
     def render_shapes(self):
-        r: data.Rect
+        r: rects.Rect
         for r in self.rects:
             self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=1))
 
         if values.debug_player is not None:
             d = values.debug_player
             self.shapes.add(self.canvas.create_rectangle(d.x1, d.y1, d.x2, d.y2, fill='', outline=d.color, width=3))
-        if values.debug_monster is not None:
-            d = values.debug_monster
+        if values.debug_mob is not None:
+            d = values.debug_mob
             self.shapes.add(self.canvas.create_rectangle(d.x1, d.y1, d.x2, d.y2, fill='', outline=d.color, width=3))
 
 

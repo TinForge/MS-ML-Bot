@@ -1,6 +1,8 @@
+# Sends virtual keystrokes
+
+import time
 import ctypes
 from ctypes import wintypes
-import time
 
 user32 = ctypes.WinDLL('user32', use_last_error=True)
 
@@ -22,6 +24,7 @@ VK_MENU = 0x12
 VK_CONTROL = 0x11
 VK_LEFT = 0x25
 VK_RIGHT = 0x27
+VK_Z = 0x5A
 
 # C struct definitions
 

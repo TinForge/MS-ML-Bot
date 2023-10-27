@@ -3,7 +3,7 @@
 from tools import window_functions
 from tools import overlay
 
-from process import decision, detection
+from process import calculations, detection, bot
 
 
 window_found = False
@@ -11,15 +11,19 @@ window_active = False
 window_rect = None
 
 detection_active = False
-decision_active = False
+calculations_active = False
+bot_active = False
 
 overlay_visible = False
 
-detected_instances = None  # Set by detection.py
-debug_player = None  # 
-debug_monster = None  # 
-debug_action = "Null"
-debug_distance = 0
+# Set by detection.py
+detected_instances = None  
+debug_player = None
+debug_mob = None
+debug_x_distance = 0
+debug_y_distance = 0
+debug_direction = None
+debug_action = "nothing"
 
 
 def update():
@@ -35,9 +39,12 @@ def update():
     global detection_active
     if detection.instance:
         detection_active = detection.instance.is_running
-    global decision_active
-    if decision.instance:
-        decision_active = decision.instance.is_running
+    global calculations_active
+    if calculations.instance:
+        calculations_active = calculations.instance.is_running
+    global bot_active
+    if bot.instance:
+        bot_active = bot.instance.is_running
 
     # Debug
     global overlay_visible

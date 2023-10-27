@@ -12,12 +12,13 @@ gitdb==4.0.10
 GitPython==3.1.31
 idna==3.4
 Jinja2==3.1.2
+keyboard==0.13.5
 kiwisolver==1.4.4
 MarkupSafe==2.1.2
 matplotlib==3.7.1
 mccabe==0.7.0
 mpmath==1.3.0
--e git+https://github.com/TinForge/MS-ML-Bot.git@c1296dd3700b9d562175266f36e30893c22bec5b#egg=MS_ML_Bot
+-e git+https://github.com/TinForge/MS-ML-Bot.git@d2dd200303016856bf96d171d2565ba47dd3a668#egg=MS_ML_Bot
 mypy-extensions==0.4.3
 networkx==3.1
 numpy==1.24.3

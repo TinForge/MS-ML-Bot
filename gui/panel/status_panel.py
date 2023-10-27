@@ -4,7 +4,8 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import references
-from tools import values, window_functions
+from data import values
+from tools import window_functions
 from tools.persistent import save_data
 
 

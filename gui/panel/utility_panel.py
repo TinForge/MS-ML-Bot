@@ -3,7 +3,8 @@
 from tkinter import *
 from tkinter.ttk import *
 
-from tools import values, window_functions
+from data import values
+from tools import window_functions
 
 
 class UtilityPanel(LabelFrame):

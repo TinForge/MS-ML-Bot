@@ -2,8 +2,7 @@
 import torch
 from PIL import ImageGrab
 from tools import overlay
-from tools import values
-from process import data
+from data import values, rects
 
 
 class Model:
@@ -21,7 +20,7 @@ class Model:
 
 
     def run(self, crop=True, debug=True):
-        rects = []
+        detections = []
         if crop:
             im = ImageGrab.grab(bbox=values.window_rect)  # Provides rect of maplestory window, however the rects need to be localized back to window coords
         else:
@@ -60,10 +59,10 @@ class Model:
                 name = "Unknown"
                 color = 'white'
 
-            r = data.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3])
-            rects.append(r)
+            r = rects.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3])
+            detections.append(r)
 
-        return rects
+        return detections
 
 
 def main():

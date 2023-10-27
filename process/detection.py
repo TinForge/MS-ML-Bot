@@ -1,18 +1,18 @@
+# Thread for detecting models
+
 from gui import window
 import time
 import threading
 
-from tools import values
+from data import values
 from yolov5 import model
 
 
 class DetectionThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)  # execute the base constructor
-
         global instance
         instance = self
-
         self.is_running = False
         self.model = model.Model()
 
