@@ -14,7 +14,8 @@ class BotThread(threading.Thread):
         global instance
         instance = self
         self.is_running = False
-        self.profile = profiles.WarriorShort()
+        # self.profile = profiles.WarriorShort()
+        self.profile = profiles.WarriorLong()
 
 
     def run(self):
@@ -39,7 +40,12 @@ class BotThread(threading.Thread):
 
         if player is not None and mob is not None:
 
-            if abs(x_distance) > self.profile.max_range:
+            if abs(x_distance) > 350:
+                values.debug_action = "move closer"
+                self.move(direction)
+                self.random_jump(2)
+
+            elif abs(x_distance) > self.profile.max_range:
                 values.debug_action = "move closer"
                 self.move(direction)
 
@@ -47,18 +53,24 @@ class BotThread(threading.Thread):
                 if y_distance > self.profile.min_height and y_distance < self.profile.max_height:
                     values.debug_action = "attack"
                     self.attack(direction)
-                elif y_distance > self.profile.max_height and y_distance < self.profile.max_height + 50:
+                elif y_distance > self.profile.max_height and y_distance < self.profile.max_height + 75:
                     values.debug_action = "jump attack"
                     self.jump_attack(direction)
+                elif y_distance < self.profile.min_height:
+                    values.debug_action = "move closer"
+                    self.move(direction)
+                elif y_distance < -150:
+                    values.debug_action = "floor drop"
 
             elif abs(x_distance) < self.profile.min_range:
                 values.debug_action = "move away"
                 self.move(keyboard.VK_RIGHT if direction == keyboard.VK_LEFT else keyboard.VK_LEFT)
 
+            self.loot()
+
         elif player is not None and mob is None:
             values.debug_action = "random move"
             self.random_move()
-            self.loot()
 
 
     def clear_values(self):
@@ -70,7 +82,7 @@ class BotThread(threading.Thread):
 
     def attack(self, direction):
         keyboard.PressKey(direction)
-        time.sleep(0.01)
+        time.sleep(0.05)
         keyboard.ReleaseKey(direction)
 
         keyboard.PressKey(keyboard.VK_CONTROL)
@@ -79,8 +91,15 @@ class BotThread(threading.Thread):
 
     def move(self, direction):
         keyboard.PressKey(direction)
-        time.sleep(0.3)
+        time.sleep(0.2)
         keyboard.ReleaseKey(direction)
+
+    def random_jump(self, chance):
+        i = random.randint(1, chance)
+        if i == chance:
+            keyboard.PressKey(keyboard.VK_MENU)
+            time.sleep(0.01)
+            keyboard.ReleaseKey(keyboard.VK_MENU)
 
     def move_jump(self, direction):
         keyboard.PressKey(direction)
@@ -101,7 +120,7 @@ class BotThread(threading.Thread):
 
     def jump_attack(self, direction):
         keyboard.PressKey(keyboard.VK_MENU)
-        time.sleep(0.6)
+        time.sleep(0.4)
         keyboard.ReleaseKey(keyboard.VK_MENU)
 
         keyboard.PressKey(direction)
@@ -113,11 +132,11 @@ class BotThread(threading.Thread):
         keyboard.ReleaseKey(keyboard.VK_CONTROL)
 
     def loot(self):
-        i = random.randint(1, 4)
-        if i == 4:
-            keyboard.PressKey(keyboard.VK_Z)
-            time.sleep(0.01)
-            keyboard.ReleaseKey(keyboard.VK_Z)
+        # i = random.randint(1, 4)
+        # if i == 4:
+        keyboard.PressKey(keyboard.VK_Z)
+        # time.sleep(0.01)
+        keyboard.ReleaseKey(keyboard.VK_Z)
 
     def random_move(self):
         i = random.randint(1, 2)

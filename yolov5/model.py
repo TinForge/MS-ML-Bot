@@ -15,7 +15,7 @@ class Model:
             self.model.cpu()
 
         # self.model.imgsz = 1280  # doesn't help
-        self.model.conf = 0.75  # confidence threshold (0-1)
+        self.model.conf = 0.7  # confidence threshold (0-1)
         self.model.iou = 0.5  # NMS IoU threshold (0-1)
 
 
@@ -31,11 +31,11 @@ class Model:
 
         if debug:
             results.print()
+            # print(results.pandas().xyxy[0])  # prints each element
 
         # results.save()  # saves image locally
         # print(*labels)
         # print(*cord_thres)
-        # print(results.pandas().xyxy[0])  # prints each element
 
         for x in range(len(labels)):
             # print(labels[x])
@@ -46,15 +46,24 @@ class Model:
             elif labels[x] == 1.0:  # Ladder
                 name = "Ladder"
                 color = 'yellow'
-            elif labels[x] == 2.0:  # Mob
+            elif labels[x] == 2.0:  # Mushroom
                 name = "Mob"
                 color = 'red'
-            elif labels[x] == 3.0:  # NPC
-                name = "NPC"
-                color = 'purple'
+            elif labels[x] == 3.0:  # Pig
+                name = "Mob"
+                color = 'red'
             elif labels[x] == 4.0:  # Player
                 name = "Player"
                 color = 'blue'
+            elif labels[x] == 5.0:  # Slime
+                name = "Mob"
+                color = 'red'
+            elif labels[x] == 6.0:  # Snail
+                name = "Mob"
+                color = 'red'
+            elif labels[x] == 7.0:  # Stump
+                name = "Mob"
+                color = 'red'
             else:
                 name = "Unknown"
                 color = 'white'
