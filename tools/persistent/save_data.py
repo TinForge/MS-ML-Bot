@@ -18,15 +18,19 @@ class TextFile():
 
     def save(self, value):
         with open(self.file_path, 'w') as f:
-            f.write(value)
+            f.write(str(value))
 
 
 window_name = TextFile('WINDOW NAME', '(Window Name)')
+snap_on_start = TextFile('SNAP ON START', 'False')
 
 
 def main():
     window_name.save('test')
     print(window_name.read())
+
+    snap_on_start.save(False)
+    print(snap_on_start.read())
 
 
 if __name__ == "__main__":

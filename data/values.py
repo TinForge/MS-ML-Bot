@@ -29,11 +29,11 @@ debug_action = "nothing"
 def update():
     # Window
     global window_found
-    window_found = window_functions.is_found()
+    window_found = window_functions.is_maple_found()
     global window_active
-    window_active = window_functions.is_active()
+    window_active = window_functions.is_maple_active()
     global window_rect
-    window_rect = window_functions.get_rect()
+    window_rect = window_functions.get_maple_position()
 
     # Process
     global detection_active

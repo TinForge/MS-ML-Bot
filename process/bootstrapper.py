@@ -11,8 +11,8 @@ from process import calculations, detection, bot
 
 def run():
     # Run ML
-    detection_thread = detection.DetectionThread()
-    detection_thread.start()
+    # detection_thread = detection.DetectionThread()
+    # detection_thread.start()
 
     # Bot Logic
     decision_thread = calculations.CalculationThread()

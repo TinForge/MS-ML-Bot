@@ -23,7 +23,7 @@ class TestPanel(LabelFrame):
 
 
     def show_window(self):
-        window_functions.set_rect()
+        window_functions.snap_maple_position()
 
 
     def refresh(self):
