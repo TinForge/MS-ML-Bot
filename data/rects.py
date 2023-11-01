@@ -12,6 +12,7 @@ class Rect:
         self.y2 = y2
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
+        self.size = (self.x2 - self.x1) * (self.y2 - self.y1)
 
 
 def compare_distance(rect1, rect2):

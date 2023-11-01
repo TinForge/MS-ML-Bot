@@ -16,7 +16,7 @@ class OverlayPanel(LabelFrame):
         self.overlay_visible.grid(row=1, column=0, padx=15, pady=5)
         Button(self, text="Toggle", command=lambda: self.toggle_overlay()).grid(sticky=E, row=1, column=2, padx=0, pady=0)
 
-        OPTIONS = ["Raw Detections", "Averaged Detections", "Targets", "Velocities", "Platforms"]
+        OPTIONS = ["Raw Detections", "Processed Detections", "Targets", "Velocities", "Platforms"]
         self.selected_options = []
         self.listbox = Listbox(self, selectmode=MULTIPLE, height=len(OPTIONS))
         for option in OPTIONS:
@@ -50,17 +50,15 @@ class OverlayPanel(LabelFrame):
                     overlay.instance.render_box(values.detected_instances)
 
 
-                if "Averaged Detections" in self.selected_options:
+                if "Processed Detections" in self.selected_options:
                     pass
 
                 if "Targets" in self.selected_options:
                     if values.debug_player is not None:
                         d = values.debug_player
-                        # overlay.instance.render_box([d], 3)
                         overlay.instance.render_floor([d])
                     if values.debug_mob is not None:
                         d = values.debug_mob                        
-                        # overlay.instance.render_box([d], 3)
                         overlay.instance.render_circle([d])
 
                 if "Velocities" in self.selected_options:
