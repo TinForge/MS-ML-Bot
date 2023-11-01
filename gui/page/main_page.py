@@ -14,9 +14,6 @@ class MainPage(Frame):
         self.app.tk.geometry("300x550")
         Frame.__init__(self, app.tk)
         #
-        # Label(self, text="Main Page", font='bold').pack(pady=10)
-        # Button(self, text="Inference", command=lambda: self.run_inference()).pack()
-        #
         self.applicationPanel = application_panel.ApplicationPanel(self)
         self.utilityPanel = utility_panel.UtilityPanel(self)
         self.controlPanel = process_panel.ProcessPanel(self)

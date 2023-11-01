@@ -54,6 +54,11 @@ def show_maple():
         shell.SendKeys('%')
         # win32gui.SetForegroundWindow(try_get_window())
         ctypes.windll.user32.SetForegroundWindow(get_maple_window()) 
+        ctypes.windll.user32.ShowWindow(get_maple_window(), 9)  # SW_RESTORE = 9
+
+
+def is_maple_minimized():  # returns non-zero value if true
+    return ctypes.windll.user32.IsIconic(get_maple_window())
 
 
 def snap_bot_position():

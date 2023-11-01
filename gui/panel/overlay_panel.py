@@ -17,16 +17,16 @@ class OverlayPanel(LabelFrame):
         Button(self, text="Toggle", command=lambda: self.toggle_overlay()).grid(sticky=E, row=1, column=2, padx=0, pady=0)
 
         OPTIONS = ["Raw Detections", "Averaged Detections", "Targets", "Velocities", "Platforms"]
-        selected_options = []
+        self.selected_options = []
         self.listbox = Listbox(self, selectmode=MULTIPLE, height=len(OPTIONS))
         for option in OPTIONS:
             self.listbox.insert(END, option)
 
         def handle_selection(event):
-            selected_options.clear()
+            self.selected_options.clear()
             selected_indices = self.listbox.curselection()
             for index in selected_indices:
-                selected_options.append(OPTIONS[index])
+                self.selected_options.append(OPTIONS[index])
         self.listbox.bind("<<ListboxSelect>>", handle_selection)
 
         self.listbox.grid(row=1, column=1, pady=5, sticky="ew")  # ew expands east-west
@@ -40,8 +40,38 @@ class OverlayPanel(LabelFrame):
 
 
     def refresh(self):
+        self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
+
         if overlay.instance is not None:
             if values.detected_instances is not None:
-                overlay.instance.display_rects(values.detected_instances)
+                overlay.instance.clear_shapes()
 
-        self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
+                if "Raw Detections" in self.selected_options:
+                    overlay.instance.render_box(values.detected_instances)
+
+
+                if "Averaged Detections" in self.selected_options:
+                    pass
+
+                if "Targets" in self.selected_options:
+                    if values.debug_player is not None:
+                        d = values.debug_player
+                        # overlay.instance.render_box([d], 3)
+                        overlay.instance.render_floor([d])
+                    if values.debug_mob is not None:
+                        d = values.debug_mob                        
+                        # overlay.instance.render_box([d], 3)
+                        overlay.instance.render_circle([d])
+
+                if "Velocities" in self.selected_options:
+                    pass
+
+                if "Platforms" in self.selected_options:
+                    ground_list = [item for item in values.detected_instances if item.name == "Ground"]
+                    overlay.instance.render_floor(ground_list)
+
+
+# regular boxes
+# thick boxes
+# platform lines
+# velocity lines
