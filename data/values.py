@@ -26,6 +26,9 @@ debug_direction = None
 debug_action = "nothing"
 
 
+detected_trackers = []
+
+
 def update():
     # Window
     global window_found

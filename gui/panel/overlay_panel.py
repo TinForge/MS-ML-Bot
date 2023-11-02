@@ -49,9 +49,10 @@ class OverlayPanel(LabelFrame):
                 if "Raw Detections" in self.selected_options:
                     overlay.instance.render_box(values.detected_instances)
 
-
                 if "Processed Detections" in self.selected_options:
-                    pass
+                    valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
+                    rects = [rect.average() for rect in valid_trackers]
+                    overlay.instance.render_box(rects)
 
                 if "Targets" in self.selected_options:
                     if values.debug_player is not None:
