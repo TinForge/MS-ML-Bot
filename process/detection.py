@@ -34,13 +34,16 @@ class DetectionThread(threading.Thread):
 
         for tracker in containers:
             tracker.prime()
+
         for rect in values.detected_instances:
             matching_trackers = [tracker for tracker in containers if tracker.name == rect.name]
-            ordered_trackers = sorted(matching_trackers, key=lambda r: math.sqrt((r[0] - rect[0])**2 + (r[1] - rect[1])**2))
-            similarity = min(rect.size, ordered_trackers[0].size) / max(rect.size, ordered_trackers[0].size) * 100
-            if similarity >= 90:
-                print("The areas are 90% similar in size.")
-                ordered_trackers[0].list.add(rect)
+            ordered_trackers = sorted(matching_trackers, key=lambda r: math.sqrt((r.center_x() - rect.center_x)**2 + (r.center_y() - rect.center_y)**2))
+            if len(ordered_trackers) != 0:
+                similarity = min(rect.size, ordered_trackers[0].size()) / max(rect.size, ordered_trackers[0].size()) * 100
+                if similarity >= 75:
+                    ordered_trackers[0].add(rect)
+                else:
+                    containers.append(trackers.Tracker(rect))
             else:
                 containers.append(trackers.Tracker(rect))
 

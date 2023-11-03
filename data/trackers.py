@@ -1,10 +1,9 @@
 from data import rects
 
 max_missed = 10
-valid_threshold = 5
-
-proximity_threshold = 5
-size_threshold = 5
+valid_threshold = 2
+invalid_threshold = 3
+cache_size = 2
 
 
 class Tracker:
@@ -20,7 +19,7 @@ class Tracker:
 
     def add(self, rect):
         self.list.insert(0, rect)
-        self.list = self.list[:5]
+        self.list = self.list[:cache_size]
         self.flag = True
 
     def prime(self):
@@ -32,10 +31,10 @@ class Tracker:
             self.missed = 0
         else:
             self.consecutive = 0
-            self.missed += 0
+            self.missed += 1
         if self.consecutive > valid_threshold:  # Show
             self.valid = True
-        if self.missed > valid_threshold:  # Hide
+        if self.missed > invalid_threshold:  # Hide
             self.valid = False
         if self.missed > max_missed:  # Delete
             self.dispose = True
@@ -54,3 +53,18 @@ class Tracker:
         y2 = y2 / len(self.list)
 
         return rects.Rect(self.name, self.color, x1, y1, x2, y2)
+
+    def center_x(self):
+        r = self.average()
+        x = (r.x1 + r.x2) / 2
+        return x
+
+    def center_y(self):
+        r = self.average()
+        y = (r.y1 + r.y2) / 2
+        return y
+
+    def size(self):        
+        r = self.average()
+        s = (r.x2 - r.x1) * (r.y2 - r.y1)
+        return s
