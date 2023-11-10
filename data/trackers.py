@@ -1,12 +1,11 @@
 import time
-import math
 from data import rects
 
 
-max_missed = 10
-valid_threshold = 2
-invalid_threshold = 3
-cache_size = 2
+cache_size = 3  # how many frames to track. 2 is more responsive, 3 stabilizes velocity
+valid_threshold = 2  # how many positive IDs to display
+invalid_threshold = 3  # how many missed frames to hide
+max_missed = 10  # how many missed frames to delete tracker
 
 
 class Tracker:
@@ -83,9 +82,13 @@ class Tracker:
             total_distance_y += distance_y
             total_time += time_diff
 
-        # Calculate average velocity components in the x and y directions
-        average_velocity_x = total_distance_x / total_time
-        average_velocity_y = total_distance_y / total_time
+        if total_time == 0:
+            average_velocity_x = 0
+            average_velocity_y = 0
+        else:
+            # Calculate average velocity components in the x and y directions
+            average_velocity_x = total_distance_x / total_time
+            average_velocity_y = total_distance_y / total_time
 
         current_timestamp = int(time.time() * 1000)
         initial_timestamp = self.list[0].timestamp

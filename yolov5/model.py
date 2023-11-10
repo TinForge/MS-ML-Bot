@@ -16,8 +16,8 @@ class Model:
             self.model.cpu()
 
         # self.model.imgsz = 1280  # doesn't help
-        self.model.conf = 0.6  # confidence threshold (0-1)
-        self.model.iou = 0.45  # NMS IoU threshold (0-1)
+        self.model.conf = 0.35  # confidence threshold (0-1)     0.6 good, 0.4 good
+        self.model.iou = 0.7  # NMS IoU threshold (0-1)        0.45 good, 0.65 good
 
 
     def run(self, crop=True, debug=True):

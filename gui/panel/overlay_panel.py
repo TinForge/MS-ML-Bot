@@ -53,6 +53,11 @@ class OverlayPanel(LabelFrame):
                     valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
                     rects = [rect.average() for rect in valid_trackers]
                     overlay.instance.render_box(rects)
+                    invalid_trackers = [tracker for tracker in values.detected_trackers if not tracker.valid]
+                    rects = [rect.average() for rect in invalid_trackers]
+                    for r in rects:
+                        r.color = 'gray'
+                    # overlay.instance.render_box(rects)
 
                 if "Targets" in self.selected_options:
                     if values.debug_player is not None:
