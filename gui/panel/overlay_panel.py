@@ -63,7 +63,9 @@ class OverlayPanel(LabelFrame):
                         overlay.instance.render_circle([d])
 
                 if "Velocities" in self.selected_options:
-                    pass
+                    valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
+                    rects = [rect.extrapolated_average() for rect in valid_trackers]
+                    overlay.instance.render_box(rects)
 
                 if "Platforms" in self.selected_options:
                     ground_list = [item for item in values.detected_instances if item.name == "Ground"]

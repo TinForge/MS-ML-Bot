@@ -1,4 +1,7 @@
+import time
+import math
 from data import rects
+
 
 max_missed = 10
 valid_threshold = 2
@@ -53,6 +56,45 @@ class Tracker:
         y2 = y2 / len(self.list)
 
         return rects.Rect(self.name, self.color, x1, y1, x2, y2)
+
+
+    def extrapolated_average(self):
+        total_distance_x = 0
+        total_distance_y = 0
+        total_time = 0
+
+        if len(self.list) <= 1:
+            return self.average()
+
+        for i in range(cache_size - 1, 0, -1):
+            # Get the current and previous coordinate
+            curr_coord = self.list[i]
+            prev_coord = self.list[i - 1]
+
+            # Calculate distance between the coordinates in the x and y directions
+            distance_x = curr_coord.center_x - prev_coord.center_x
+            distance_y = curr_coord.center_y - prev_coord.center_y
+
+            # Calculate time difference between the timestamps
+            time_diff = curr_coord.timestamp - prev_coord.timestamp
+
+            # Accumulate total distance in the x and y directions and total time
+            total_distance_x += distance_x
+            total_distance_y += distance_y
+            total_time += time_diff
+
+        # Calculate average velocity components in the x and y directions
+        average_velocity_x = total_distance_x / total_time
+        average_velocity_y = total_distance_y / total_time
+
+        current_timestamp = int(time.time() * 1000)
+        initial_timestamp = self.list[0].timestamp
+        time_elapsed = current_timestamp - initial_timestamp
+        average_velocity_x *= time_elapsed
+        average_velocity_y *= time_elapsed
+
+        return rects.Rect(self.name, self.color, self.list[0].x1 + average_velocity_x, self.list[0].y1 + average_velocity_y, self.list[0].x2 + average_velocity_x, self.list[0].y2 + average_velocity_y)
+
 
     def center_x(self):
         r = self.average()

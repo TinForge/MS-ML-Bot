@@ -3,7 +3,7 @@ import math
 
 
 class Rect:
-    def __init__(self, name, color, x1, y1, x2, y2):
+    def __init__(self, name, color, x1, y1, x2, y2, timestamp=0):
         self.name = name
         self.color = color
         self.x1 = x1
@@ -13,6 +13,7 @@ class Rect:
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
         self.size = (self.x2 - self.x1) * (self.y2 - self.y1)
+        self.timestamp = timestamp
 
 
 def compare_distance(rect1, rect2):

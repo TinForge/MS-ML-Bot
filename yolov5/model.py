@@ -1,4 +1,5 @@
 # Controls the ML Inferencing Model
+import time
 import torch
 from PIL import ImageGrab
 from tools import overlay
@@ -15,8 +16,8 @@ class Model:
             self.model.cpu()
 
         # self.model.imgsz = 1280  # doesn't help
-        self.model.conf = 0.7  # confidence threshold (0-1)
-        self.model.iou = 0.5  # NMS IoU threshold (0-1)
+        self.model.conf = 0.6  # confidence threshold (0-1)
+        self.model.iou = 0.45  # NMS IoU threshold (0-1)
 
 
     def run(self, crop=True, debug=True):
@@ -68,7 +69,7 @@ class Model:
                 name = "Unknown"
                 color = 'white'
 
-            r = rects.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3])
+            r = rects.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3], int(time.time() * 1000))
             detections.append(r)
 
         return detections
