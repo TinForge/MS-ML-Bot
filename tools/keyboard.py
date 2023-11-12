@@ -25,6 +25,7 @@ VK_CONTROL = 0x11
 VK_LEFT = 0x25
 VK_RIGHT = 0x27
 VK_Z = 0x5A
+VK_DELETE = 0x2E
 
 # C struct definitions
 

@@ -19,8 +19,10 @@ def run():
     decision_thread.start()
 
     # Bot Logic
-    bot_thread = bot.BotThread()
-    bot_thread.start()
+    # bot_thread = bot.BotThread()
+    # bot_thread.start()
+    macro_thread = bot.MacroThread()
+    macro_thread.start()
 
     # GUI
     while window.instance is not None:

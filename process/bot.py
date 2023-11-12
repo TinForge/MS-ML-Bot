@@ -153,3 +153,59 @@ instance: BotThread = None
 # if event.event_type == keyboard.KEY_DOWN and event.name == "`":
 #     print("Toggling Decision Process")
 #     self.is_running = not self.is_running
+
+
+
+
+
+class MacroThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)  # execute the base constructor
+        global instance
+        instance = self
+        self.is_running = False
+        self.i = 0
+
+
+    def run(self):
+        while window.instance is not None:
+            if self.is_running is False:
+                time.sleep(0.1)  # Adjustable
+            else:
+                self.macro()
+                time.sleep(0.01)  # Adjustable
+
+
+    def macro(self):
+        if values.window_active is False:
+            return
+
+        if self.i < (45 / 0.2):  # total timer
+            self.i += 1
+            self.attack()
+            if self.i % 50 == 0:  # occasional move
+                self.move()
+        else:
+            self.pot()  # heal and reset
+            self.i = 0
+
+    # -----------------------------------------------
+
+
+    def attack(self):
+        keyboard.PressKey(keyboard.VK_CONTROL)
+        time.sleep(0.2)
+        keyboard.ReleaseKey(keyboard.VK_CONTROL)
+
+    def move(self):
+        keyboard.PressKey(keyboard.VK_LEFT)
+        time.sleep(0.15)
+        keyboard.ReleaseKey(keyboard.VK_LEFT)
+
+    def pot(self):
+        keyboard.PressKey(keyboard.VK_DELETE)
+        time.sleep(0.15)
+        keyboard.ReleaseKey(keyboard.VK_DELETE)
+
+
+instance: MacroThread = None
