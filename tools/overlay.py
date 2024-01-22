@@ -45,7 +45,8 @@ class Overlay:
         r: rects.Rect
         for r in new_rects:
             self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=thickness))
-
+            self.shapes.add(self.canvas.create_text((r.x1 + r.x2) / 2, r.y1 - 6, text=str(r.confidence), font=("Arial", 12)))
+            #  canvas.create_text(x, y, text=texto, font=("Arial", 12), fill="black")
         self.canvas.pack()
 
     def render_circle(self, new_rects: list, offset=6):

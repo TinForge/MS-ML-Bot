@@ -14,6 +14,10 @@ detection_active = False
 calculations_active = False
 bot_active = False
 
+looting_active = False
+randomizer_active = False
+
+
 overlay_visible = False
 
 # Set by detection.py
@@ -25,6 +29,8 @@ debug_y_distance = 0
 debug_direction = None
 debug_action = "nothing"
 
+model_iou = 0.35
+model_conf = 0.7
 
 detected_trackers = []
 

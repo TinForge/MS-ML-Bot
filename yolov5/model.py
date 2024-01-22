@@ -16,8 +16,10 @@ class Model:
             self.model.cpu()
 
         # self.model.imgsz = 1280  # doesn't help
-        self.model.conf = 0.35  # confidence threshold (0-1)     0.6 good, 0.4 good
-        self.model.iou = 0.7  # NMS IoU threshold (0-1)        0.45 good, 0.65 good
+        self.model.iou = values.model_iou
+        self.model.conf = values.model_conf
+        # self.model.iou = 0.7  # NMS IoU threshold (0-1)        0.45 good, 0.65 good
+        # self.model.conf = 0.35  # confidence threshold (0-1)     0.6 good, 0.4 good
 
 
     def run(self, crop=True, debug=True):
@@ -27,8 +29,11 @@ class Model:
         else:
             im = ImageGrab.grab()  # Data will not be as accurate if image set is not cropped
 
+        self.model.iou = values.model_iou
+        self.model.conf = values.model_conf
+
         results = self.model(im)
-        labels, cord_thres = results.xyxy[0][:, -1].cpu().numpy(), results.xyxy[0][:, :-1].cpu().numpy()
+        labels, cord_thres, confidences = results.xyxy[0][:, -1].cpu().numpy(), results.xyxy[0][:, :-1].cpu().numpy(), results.pred[0][:, :-1].cpu().numpy()
 
         if debug:
             results.print()
@@ -69,7 +74,7 @@ class Model:
                 name = "Unknown"
                 color = 'white'
 
-            r = rects.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3], int(time.time() * 1000))
+            r = rects.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3], round(confidences[x][4], 2), int(time.time() * 1000))
             detections.append(r)
 
         return detections

@@ -19,10 +19,11 @@ def run():
     decision_thread.start()
 
     # Bot Logic
-    # bot_thread = bot.BotThread()
-    # bot_thread.start()
-    macro_thread = bot.MacroThread()
-    macro_thread.start()
+    bot_thread = bot.BotThread()
+    bot_thread.start()
+
+    # macro_thread = bot.MacroThread()  # Used for battle mage on kaizen
+    # macro_thread.start()
 
     # GUI
     while window.instance is not None:

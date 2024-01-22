@@ -9,7 +9,7 @@ max_missed = 10  # how many missed frames to delete tracker
 
 
 class Tracker:
-    def __init__(self, rect):
+    def __init__(self, rect: rects.Rect):
         self.name = rect.name
         self.color = rect.color
         self.list = [rect]
@@ -19,14 +19,17 @@ class Tracker:
         self.flag = True
         self.dispose = False
 
+    # Add a rect to the tracker
     def add(self, rect):
         self.list.insert(0, rect)
         self.list = self.list[:cache_size]
         self.flag = True
 
+    # Set every frame to perform operations
     def prime(self):
         self.flag = False
 
+    # Calculates tracker's state
     def process(self):
         if self.flag is True:
             self.consecutive += 1
@@ -41,6 +44,7 @@ class Tracker:
         if self.missed > max_missed:  # Delete
             self.dispose = True
 
+    # Returns the averaged/stable rects
     def average(self):
         x1 = sum(rect.x1 for rect in self.list)
         x1 = x1 / len(self.list)
@@ -54,9 +58,12 @@ class Tracker:
         y2 = sum(rect.y2 for rect in self.list)
         y2 = y2 / len(self.list)
 
-        return rects.Rect(self.name, self.color, x1, y1, x2, y2)
+        confidence = sum(rect.confidence for rect in self.list)      
+        confidence = round(confidence / len(self.list), 2)
 
+        return rects.Rect(self.name, self.color, x1, y1, x2, y2, confidence)
 
+    # Returns the velocity extrapolated rects
     def extrapolated_average(self):
         total_distance_x = 0
         total_distance_y = 0
@@ -96,7 +103,10 @@ class Tracker:
         average_velocity_x *= time_elapsed
         average_velocity_y *= time_elapsed
 
-        return rects.Rect(self.name, self.color, self.list[0].x1 + average_velocity_x, self.list[0].y1 + average_velocity_y, self.list[0].x2 + average_velocity_x, self.list[0].y2 + average_velocity_y)
+        confidence = sum(rect.confidence for rect in self.list)
+        confidence = round(confidence / len(self.list), 2)
+
+        return rects.Rect(self.name, self.color, self.list[0].x1 + average_velocity_x, self.list[0].y1 + average_velocity_y, self.list[0].x2 + average_velocity_x, self.list[0].y2 + average_velocity_y, confidence)
 
 
     def center_x(self):

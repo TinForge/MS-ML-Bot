@@ -14,8 +14,8 @@ class BotThread(threading.Thread):
         global instance
         instance = self
         self.is_running = False
-        # self.profile = profiles.WarriorShort()
-        self.profile = profiles.WarriorLong()
+        # self.profile = profiles.WarriorLong()
+        self.profile = profiles.WarriorShort()
 
 
     def run(self):
@@ -43,7 +43,8 @@ class BotThread(threading.Thread):
             if abs(x_distance) > 350:
                 values.debug_action = "move closer"
                 self.move(direction)
-                self.random_jump(2)
+                if values.randomizer_active:
+                    self.random_jump(2)
 
             elif abs(x_distance) > self.profile.max_range:
                 values.debug_action = "move closer"
@@ -66,11 +67,13 @@ class BotThread(threading.Thread):
                 values.debug_action = "move away"
                 self.move(keyboard.VK_RIGHT if direction == keyboard.VK_LEFT else keyboard.VK_LEFT)
 
-            self.loot()
+            if values.looting_active:
+                self.loot()
 
         elif player is not None and mob is None:
-            values.debug_action = "random move"
-            self.random_move()
+            if values.randomizer_active:
+                values.debug_action = "random move"
+                self.random_move()
 
 
     def clear_values(self):
@@ -180,32 +183,48 @@ class MacroThread(threading.Thread):
         if values.window_active is False:
             return
 
-        if self.i < (45 / 0.2):  # total timer
+        if self.i < (5 / 0.1):  # total timer
             self.i += 1
             self.attack()
-            if self.i % 50 == 0:  # occasional move
-                self.move()
+            if self.i % 60 == 0:  # occasional move
+                self.move_right()
         else:
-            self.pot()  # heal and reset
             self.i = 0
+            self.teleport(keyboard.VK_LEFT)
+            self.teleport(keyboard.VK_LEFT)
+            self.teleport(keyboard.VK_LEFT)
+            self.move_right()
 
     # -----------------------------------------------
 
 
     def attack(self):
         keyboard.PressKey(keyboard.VK_CONTROL)
-        time.sleep(0.2)
+        time.sleep(0.1)
         keyboard.ReleaseKey(keyboard.VK_CONTROL)
 
-    def move(self):
+    def move_left(self):
         keyboard.PressKey(keyboard.VK_LEFT)
         time.sleep(0.15)
         keyboard.ReleaseKey(keyboard.VK_LEFT)
+
+    def move_right(self):
+        keyboard.PressKey(keyboard.VK_RIGHT)
+        time.sleep(0.15)
+        keyboard.ReleaseKey(keyboard.VK_RIGHT)
 
     def pot(self):
         keyboard.PressKey(keyboard.VK_DELETE)
         time.sleep(0.15)
         keyboard.ReleaseKey(keyboard.VK_DELETE)
+
+    def teleport(self, direction):
+        time.sleep(0.1)
+        keyboard.PressKey(direction)
+        keyboard.PressKey(keyboard.VK_SHIFT)
+        time.sleep(0.2)
+        keyboard.ReleaseKey(keyboard.VK_SHIFT)
+        keyboard.ReleaseKey(direction)
 
 
 instance: MacroThread = None

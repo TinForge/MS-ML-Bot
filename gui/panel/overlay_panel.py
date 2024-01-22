@@ -16,7 +16,7 @@ class OverlayPanel(LabelFrame):
         self.overlay_visible.grid(row=1, column=0, padx=15, pady=5)
         Button(self, text="Toggle", command=lambda: self.toggle_overlay()).grid(sticky=E, row=1, column=2, padx=0, pady=0)
 
-        OPTIONS = ["Raw Detections", "Processed Detections", "Targets", "Velocities", "Platforms"]
+        OPTIONS = ["Raw Detect", "Stable Detect", "Velocity", "Targets", "Platforms"]
         self.selected_options = []
         self.listbox = Listbox(self, selectmode=MULTIPLE, height=len(OPTIONS))
         for option in OPTIONS:
@@ -46,10 +46,10 @@ class OverlayPanel(LabelFrame):
             if values.detected_instances is not None:
                 overlay.instance.clear_shapes()
 
-                if "Raw Detections" in self.selected_options:
+                if "Raw Detect" in self.selected_options:
                     overlay.instance.render_box(values.detected_instances)
 
-                if "Processed Detections" in self.selected_options:
+                if "Stable Detect" in self.selected_options:
                     valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
                     rects = [rect.average() for rect in valid_trackers]
                     overlay.instance.render_box(rects)
@@ -59,6 +59,11 @@ class OverlayPanel(LabelFrame):
                         r.color = 'gray'
                     # overlay.instance.render_box(rects)
 
+                if "Velocity" in self.selected_options:
+                    valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
+                    rects = [rect.extrapolated_average() for rect in valid_trackers]
+                    overlay.instance.render_box(rects)
+
                 if "Targets" in self.selected_options:
                     if values.debug_player is not None:
                         d = values.debug_player
@@ -67,17 +72,6 @@ class OverlayPanel(LabelFrame):
                         d = values.debug_mob                        
                         overlay.instance.render_circle([d])
 
-                if "Velocities" in self.selected_options:
-                    valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
-                    rects = [rect.extrapolated_average() for rect in valid_trackers]
-                    overlay.instance.render_box(rects)
-
                 if "Platforms" in self.selected_options:
                     ground_list = [item for item in values.detected_instances if item.name == "Ground"]
                     overlay.instance.render_floor(ground_list)
-
-
-# regular boxes
-# thick boxes
-# platform lines
-# velocity lines
