@@ -28,6 +28,26 @@ class BotThread(threading.Thread):
                 time.sleep(0.01)  # Adjustable
 
 
+    """
+    Create multiple threads for movement, action
+        Navigation Driven
+        Horizontal (First) Left/Right
+            Move - To target
+            Idle - Arrived
+        Vertical (Whenever) Up/Down/Jump/Down Jump
+            Up - On ladder (navigating up)
+            Down - On ladder (navigating down)
+            Jump - Bridge platform/Short of mob/
+                Down Jump - Above a platform (navigating down)
+            
+        Combat Driven
+        Action (Last) Loot/Attack (Trigger)
+            Loot - Auto
+            Attack - Within Range
+
+    """
+
+
     def calculate(self):
         if values.window_active is False:
             return
@@ -37,6 +57,9 @@ class BotThread(threading.Thread):
         direction = values.debug_direction
         player = values.debug_player
         mob = values.debug_mob
+
+        priority = "attack"
+
 
         if player is not None and mob is not None:
 
@@ -134,9 +157,8 @@ class BotThread(threading.Thread):
         time.sleep(0.01)
         keyboard.ReleaseKey(keyboard.VK_CONTROL)
 
+
     def loot(self):
-        # i = random.randint(1, 4)
-        # if i == 4:
         keyboard.PressKey(keyboard.VK_Z)
         # time.sleep(0.01)
         keyboard.ReleaseKey(keyboard.VK_Z)
@@ -152,6 +174,30 @@ class BotThread(threading.Thread):
 instance: BotThread = None
 
 
+
+class MovementThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)  # execute the base constructor
+
+    def run(self):
+        while window.instance is not None:
+            self.clear_values()
+            if self.is_running is False:
+                time.sleep(0.1)  # Adjustable
+            else:
+                self.calculate()
+                time.sleep(0.01)  # Adjustable
+
+
+
+
+
+
+
+
+
+
+
 # event = keyboard.read_event()
 # if event.event_type == keyboard.KEY_DOWN and event.name == "`":
 #     print("Toggling Decision Process")
@@ -159,8 +205,7 @@ instance: BotThread = None
 
 
 
-
-
+"""
 class MacroThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)  # execute the base constructor
@@ -228,3 +273,4 @@ class MacroThread(threading.Thread):
 
 
 instance: MacroThread = None
+"""

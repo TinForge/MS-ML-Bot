@@ -11,7 +11,7 @@ from data import values
 class MainPage(Frame):
     def __init__(self, app: window.Window):
         self.app = app
-        self.app.tk.geometry("300x600")
+        self.app.tk.geometry("300x700")
         Frame.__init__(self, app.tk)
         #
         self.applicationPanel = application_panel.ApplicationPanel(self)

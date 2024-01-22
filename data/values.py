@@ -29,8 +29,8 @@ debug_y_distance = 0
 debug_direction = None
 debug_action = "nothing"
 
-model_iou = 0.35
-model_conf = 0.7
+model_iou = 0.5
+model_conf = 0.85
 
 detected_trackers = []
 

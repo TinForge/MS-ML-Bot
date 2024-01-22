@@ -14,7 +14,7 @@ def run():
     detection_thread = detection.DetectionThread()
     detection_thread.start()
 
-    # Bot Logic
+    # Process Results
     decision_thread = calculations.CalculationThread()
     decision_thread.start()
 
