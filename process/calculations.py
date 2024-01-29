@@ -37,7 +37,7 @@ class CalculationThread(threading.Thread):
         mob: rects.Rect = None
 
         if player is not None:
-            mob_instances = rects.filter_mobs_by_height(mob_instances, player, 200)  # Adjustable height threshold
+            mob_instances = rects.filter_mobs_by_height(mob_instances, player, 150)  # Adjustable height threshold
             mob = rects.find_closest_mob(mob_instances, player)
             values.debug_player = player
 

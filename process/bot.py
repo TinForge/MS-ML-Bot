@@ -14,8 +14,9 @@ class BotThread(threading.Thread):
         global instance
         instance = self
         self.is_running = False
-        # self.profile = profiles.WarriorLong()
-        self.profile = profiles.WarriorShort()
+        self.old_direction = None
+        self.profile = profiles.WarriorLong()
+        # self.profile = profiles.WarriorShort()
 
 
     def run(self):
@@ -25,7 +26,7 @@ class BotThread(threading.Thread):
                 time.sleep(0.1)  # Adjustable
             else:
                 self.calculate()
-                time.sleep(0.01)  # Adjustable
+                time.sleep(0.001)  # Adjustable
 
 
     """
@@ -58,22 +59,27 @@ class BotThread(threading.Thread):
         player = values.debug_player
         mob = values.debug_mob
 
-        priority = "attack"
 
-
+        # if has target
         if player is not None and mob is not None:
 
+            # if too far away
             if abs(x_distance) > 350:
                 values.debug_action = "move closer"
+                self.dash(direction)
                 self.move(direction)
                 if values.randomizer_active:
                     self.random_jump(2)
 
+            # if far away
             elif abs(x_distance) > self.profile.max_range:
                 values.debug_action = "move closer"
                 self.move(direction)
 
+            # if within range
             elif abs(x_distance) < self.profile.max_range:
+                self.move(None)
+
                 if y_distance > self.profile.min_height and y_distance < self.profile.max_height:
                     values.debug_action = "attack"
                     self.attack(direction)
@@ -82,17 +88,20 @@ class BotThread(threading.Thread):
                     self.jump_attack(direction)
                 elif y_distance < self.profile.min_height:
                     values.debug_action = "move closer"
-                    self.move(direction)
+                    # self.move(direction)
                 elif y_distance < -150:
                     values.debug_action = "floor drop"
 
+            # if too close
             elif abs(x_distance) < self.profile.min_range:
                 values.debug_action = "move away"
                 self.move(keyboard.VK_RIGHT if direction == keyboard.VK_LEFT else keyboard.VK_LEFT)
 
+            # spam loot
             if values.looting_active:
                 self.loot()
 
+        # if no target
         elif player is not None and mob is None:
             if values.randomizer_active:
                 values.debug_action = "random move"
@@ -106,6 +115,16 @@ class BotThread(threading.Thread):
     # -----------------------------------------------
 
 
+    def dash(self, direction):
+        keyboard.PressKey(direction)
+        time.sleep(0.05)
+        keyboard.ReleaseKey(direction)
+
+        keyboard.PressKey(keyboard.VK_SHIFT)
+        time.sleep(0.05)
+        keyboard.ReleaseKey(keyboard.VK_SHIFT)
+
+
     def attack(self, direction):
         keyboard.PressKey(direction)
         time.sleep(0.05)
@@ -116,9 +135,18 @@ class BotThread(threading.Thread):
         keyboard.ReleaseKey(keyboard.VK_CONTROL)
 
     def move(self, direction):
-        keyboard.PressKey(direction)
-        time.sleep(0.2)
-        keyboard.ReleaseKey(direction)
+        if direction is None and self.old_direction is not None:  # stop moving
+            keyboard.ReleaseKey(self.old_direction)
+        elif direction is not self.old_direction and self.old_direction is not None:  # move
+            keyboard.ReleaseKey(self.old_direction)
+            keyboard.PressKey(direction)
+            time.sleep(0.1)
+        elif self.old_direction is not None:  # continue
+            keyboard.PressKey(self.old_direction)
+            time.sleep(0.1)
+
+        self.old_direction = direction
+
 
     def random_jump(self, chance):
         i = random.randint(1, chance)
@@ -160,7 +188,7 @@ class BotThread(threading.Thread):
 
     def loot(self):
         keyboard.PressKey(keyboard.VK_Z)
-        # time.sleep(0.01)
+        time.sleep(0.01)
         keyboard.ReleaseKey(keyboard.VK_Z)
 
     def random_move(self):
@@ -172,29 +200,6 @@ class BotThread(threading.Thread):
 
 
 instance: BotThread = None
-
-
-
-class MovementThread(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)  # execute the base constructor
-
-    def run(self):
-        while window.instance is not None:
-            self.clear_values()
-            if self.is_running is False:
-                time.sleep(0.1)  # Adjustable
-            else:
-                self.calculate()
-                time.sleep(0.01)  # Adjustable
-
-
-
-
-
-
-
-
 
 
 
