@@ -69,7 +69,7 @@ class Tracker:
         total_distance_y = 0
         total_time = 0
 
-        if len(self.list) <= 1:
+        if len(self.list) <= cache_size:
             return self.average()
 
         for i in range(cache_size - 1, 0, -1):
