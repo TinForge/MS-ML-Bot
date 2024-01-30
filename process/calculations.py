@@ -36,7 +36,7 @@ class CalculationThread(threading.Thread):
         instances = values.detected_instances
         player: rects.Rect = rects.find_rect_by_class(instances, "Player")
         values.debug_player = player
-        
+
         # get platform
         platform_instances = rects.find_platform_instances(instances)
         if player is not None:
@@ -79,9 +79,14 @@ class CalculationThread(threading.Thread):
                 # x = path.center_x - player.x1
                 values.debug_x_distance = 0 if x > 30 else x  # player is close enough
 
-            values.debug_y_distance = player.y2 - path.y1  # inverted, so positive is up, negative is down.
-            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT  # think this is flipped
+            values.debug_on_ladder = values.debug_path.name == "Ladder"
+            if values.debug_on_ladder:
+                values.debug_y_distance = player.y2 - path.y2
+            else:
+                values.debug_y_distance = player.y2 - path.y1
+            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
             values.debug_state = "Navigate"
+
 
         # searching logic
         elif values.debug_player is None:
@@ -93,6 +98,7 @@ class CalculationThread(threading.Thread):
         values.debug_platform = None
         values.debug_mob = None
         values.debug_path = None
+        values.debug_on_ladder = False
         values.debug_x_distance = 0
         values.debug_y_distance = 0
         values.debug_direction = None

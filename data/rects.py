@@ -74,7 +74,7 @@ def find_closest_mob(rects, player):
     return closest_rect
 
 
-def find_closest_path(rects, platform):
+def find_closest_path(rects, player):
     closest_distance = float('inf')
     closest_rect = None
 
@@ -82,10 +82,10 @@ def find_closest_path(rects, platform):
 
     for rect in rects:
         if rect.name == "Platform" or rect.name == "Ladder":
-            if rect is not platform:
-                if platform.y2 - rect.y1 < jump_height:  # if rect is higher or equal height
-                    if platform.center_y - rect.center_y < jump_height and platform.center_y - rect.center_y > 0:  # if rect is higher, again.
-                        distance = math.sqrt((platform.center_x - rect.center_x)**2)
+            if rect is not player:
+                if player.center_y - rect.y2 > 0:  # if rect is not below
+                    if (rect.name == "Platform" and player.y2 - rect.y1 < jump_height) or (rect.name == "Ladder" and player.y2 - rect.y2 < jump_height):  # if rect is reachable
+                        distance = math.sqrt((player.center_x - rect.center_x)**2)
                         if distance < closest_distance:
                             closest_distance = distance
                             closest_rect = rect

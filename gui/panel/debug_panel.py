@@ -38,6 +38,9 @@ class DebugPanel(LabelFrame):
         self.debug4 = Label(self, text="Null")
         self.debug4.grid(row=6, column=0, padx=10, pady=5, sticky=W)
 
+        self.debugX = Label(self, text="Null")
+        self.debugX.grid(row=7, column=0, padx=10, pady=5, sticky=W)
+
         # Column 2
 
         self.debug5 = Label(self, text="Null")
@@ -77,3 +80,4 @@ class DebugPanel(LabelFrame):
         self.debug6.configure(text="Platform" if values.debug_platform is not None else "No Platform")
         self.debug7.configure(text="Mob" if values.debug_mob is not None else "No Mob")
         self.debug8.configure(text="Path" if values.debug_path is not None else "No Path")
+        self.debugX.configure(text="Ladder" if values.debug_on_ladder is True else "No Ladder")

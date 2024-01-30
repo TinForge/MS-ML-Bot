@@ -29,6 +29,7 @@ debug_x_distance = 0
 debug_y_distance = 0
 debug_direction = None
 debug_path = None
+debug_on_ladder = False
 
 debug_action = "nothing"
 debug_state = "nothing"

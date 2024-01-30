@@ -42,7 +42,9 @@ class BotThread(threading.Thread):
 
 
         if values.debug_state == "Attack":
-
+            if values.debug_mob is None:
+                return
+            
             # if too far away
             if abs(x_distance) > 350:
                 values.debug_action = "move closer"
@@ -79,6 +81,9 @@ class BotThread(threading.Thread):
 
 
         elif values.debug_state == "Navigate":
+            if values.debug_path is None:
+                return
+            
             # if too far away
             if abs(x_distance) > 350:
                 values.debug_action = "move closer"
@@ -94,21 +99,19 @@ class BotThread(threading.Thread):
             elif abs(x_distance) == 0 and (y_distance < self.profile.platform_height):
                 values.debug_action = "jump"
                 self.move(None)
-                self.jump()
-                # self.up()
+                self.jump(up=values.debug_on_ladder)
 
             # if within range
             elif abs(x_distance) < self.profile.platform_range and (y_distance < self.profile.platform_height):
                 values.debug_action = "moving jump"
                 self.move(None)
-                self.move_jump(direction)
-                # self.up()
+                self.move_jump(direction, up=values.debug_on_ladder)
 
         elif values.debug_state == "Search":
+            self.up()
             if values.randomizer_active:
                 values.debug_action = "random move"
                 self.random_move()
-                self.up()
                 
         # spam loot
         if values.looting_active:
@@ -161,12 +164,16 @@ class BotThread(threading.Thread):
         keyboard.ReleaseKey(keyboard.VK_UP)
 
 
-    def jump(self):
+    def jump(self, up=False):
         keyboard.PressKey(keyboard.VK_MENU)
         time.sleep(0.25)
+        if up:
+            keyboard.PressKey(keyboard.VK_UP)
         keyboard.ReleaseKey(keyboard.VK_MENU)
         time.sleep(0.25)
-
+        if up:
+            time.sleep(1)
+            keyboard.ReleaseKey(keyboard.VK_UP)
 
     def random_jump(self, chance):
         i = random.randint(1, chance)
@@ -175,14 +182,19 @@ class BotThread(threading.Thread):
             time.sleep(0.01)
             keyboard.ReleaseKey(keyboard.VK_MENU)
 
-    def move_jump(self, direction):
+    def move_jump(self, direction, up=False):
         keyboard.PressKey(direction)
-        time.sleep(0.1)
+        time.sleep(0.15)
         keyboard.PressKey(keyboard.VK_MENU)
+        if up:
+            keyboard.PressKey(keyboard.VK_UP)
         time.sleep(0.25)
         keyboard.ReleaseKey(keyboard.VK_MENU)
         keyboard.ReleaseKey(direction)
         time.sleep(0.4)
+        if up:
+            time.sleep(1)
+            keyboard.ReleaseKey(keyboard.VK_UP)
 
     def move_jump_attack(self, direction):
         keyboard.PressKey(direction)
