@@ -59,17 +59,15 @@ class CalculationThread(threading.Thread):
             path: rects.Rect = rects.find_closest_path(instances, player)  # fallback if no platform is found
             values.debug_path = path
 
-        # # mob logic
-        # if values.debug_mob is not None:
-        #     values.debug_x_distance = mob.center_x - player.center_x
-        #     values.debug_y_distance = player.center_y - mob.center_y
-        #     values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
-        #     values.debug_state = "Attack"
+        # mob logic
+        if values.debug_mob is not None:
+            values.debug_x_distance = mob.center_x - player.center_x
+            values.debug_y_distance = player.center_y - mob.center_y
+            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
+            values.debug_state = "Attack"
 
-        # # platform logic   
-        # el
-        
-        if values.debug_path is not None:
+        # platform logic   
+        elif values.debug_path is not None:
             if player.center_x < path.center_x:  # player is left of platform
                 x = path.x1 - player.x2
                 # x = path.center_x - player.x2
