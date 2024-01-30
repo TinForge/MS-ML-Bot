@@ -27,10 +27,13 @@ debug_mob = None
 debug_x_distance = 0
 debug_y_distance = 0
 debug_direction = None
+debug_platform = None
+
 debug_action = "nothing"
+debug_state = "nothing"
 
 model_iou = 0.5
-model_conf = 0.85
+model_conf = 0.65
 
 detected_trackers = []
 

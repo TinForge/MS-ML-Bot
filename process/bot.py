@@ -14,37 +14,24 @@ class BotThread(threading.Thread):
         global instance
         instance = self
         self.is_running = False
-        self.old_direction = None
+
         self.profile = profiles.WarriorLong()
         # self.profile = profiles.WarriorShort()
+
+        self.old_direction = None
 
 
     def run(self):
         while window.instance is not None:
             self.clear_values()
             if self.is_running is False:
-                time.sleep(0.1)  # Adjustable
+                time.sleep(0.2)  # Adjustable
             else:
                 self.calculate()
                 time.sleep(0.001)  # Adjustable
 
 
     """
-    Create multiple threads for movement, action
-        Navigation Driven
-        Horizontal (First) Left/Right
-            Move - To target
-            Idle - Arrived
-        Vertical (Whenever) Up/Down/Jump/Down Jump
-            Up - On ladder (navigating up)
-            Down - On ladder (navigating down)
-            Jump - Bridge platform/Short of mob/
-                Down Jump - Above a platform (navigating down)
-            
-        Combat Driven
-        Action (Last) Loot/Attack (Trigger)
-            Loot - Auto
-            Attack - Within Range
 
     """
 
@@ -58,6 +45,11 @@ class BotThread(threading.Thread):
         direction = values.debug_direction
         player = values.debug_player
         mob = values.debug_mob
+
+        if mob is None:
+            values.debug_state = "Navigate"
+        else: 
+            values.debug_state = "Attack"
 
 
         # if has target

@@ -46,8 +46,8 @@ class Model:
         for x in range(len(labels)):
             # print(labels[x])
             # print(cord_thres[x])
-            if labels[x] == 0.0:  # Ground
-                name = "Ground"
+            if labels[x] == 0.0:  # Platform
+                name = "Platform"
                 color = 'brown'
             elif labels[x] == 1.0:  # Ladder
                 name = "Ladder"

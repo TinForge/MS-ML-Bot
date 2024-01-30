@@ -55,7 +55,8 @@ class DetectionThread(threading.Thread):
 
         values.detected_trackers = containers
 
-        values.detected_instances = [tracker.extrapolated_average() for tracker in containers]
+        # Use stable or velocity instances
+        # values.detected_instances = [tracker.extrapolated_average() for tracker in containers]
 
         #   prime trackers first
         #   sweep through every rect first
