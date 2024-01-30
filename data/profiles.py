@@ -8,10 +8,14 @@ class Profile():
         self.min_height = None
         self.max_height = None
         # self.jump_attack = False
+        self.platform_range = 50
+        self.platform_height = 100
+
 
 
 class WarriorShort(Profile):
     def __init__(self):
+        Profile.__init__(self)
         self.min_range = 10
         self.max_range = 100
         self.min_height = -30
@@ -20,6 +24,7 @@ class WarriorShort(Profile):
 
 class WarriorLong(Profile):
     def __init__(self):
+        Profile.__init__(self)
         self.min_range = 70
         self.max_range = 150
         self.min_height = -30

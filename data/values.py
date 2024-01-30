@@ -23,11 +23,12 @@ overlay_visible = False
 # Set by detection.py
 detected_instances = None  
 debug_player = None
+debug_platform = None
 debug_mob = None
 debug_x_distance = 0
 debug_y_distance = 0
 debug_direction = None
-debug_platform = None
+debug_path = None
 
 debug_action = "nothing"
 debug_state = "nothing"

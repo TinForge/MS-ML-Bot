@@ -71,6 +71,10 @@ class OverlayPanel(LabelFrame):
                     if values.debug_mob is not None:
                         d = values.debug_mob                        
                         overlay.instance.render_circle([d])
+                    if values.debug_path is not None:
+                        d = values.debug_path                        
+                        overlay.instance.render_floor([d])
+
 
                 if "Platforms" in self.selected_options:
                     ground_list = [item for item in values.detected_instances if item.name == "Ground"]

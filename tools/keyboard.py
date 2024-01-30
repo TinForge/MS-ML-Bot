@@ -21,6 +21,9 @@ MAPVK_VK_TO_VSC = 0
 VK_TAB = 0x09
 VK_MENU = 0x12
 
+VK_UP = 0x26
+VK_DOWN = 0x28
+
 VK_CONTROL = 0x11
 VK_LEFT = 0x25
 VK_RIGHT = 0x27
@@ -92,12 +95,17 @@ user32.SendInput.argtypes = (wintypes.UINT,  # nInputs
 
 
 def PressKey(hexKeyCode):
+    if hexKeyCode is None:
+        return
     x = INPUT(type=INPUT_KEYBOARD,
               ki=KEYBDINPUT(wVk=hexKeyCode))
     user32.SendInput(1, ctypes.byref(x), ctypes.sizeof(x))
 
 
 def ReleaseKey(hexKeyCode):
+    if hexKeyCode is None:
+        return
+
     x = INPUT(type=INPUT_KEYBOARD,
               ki=KEYBDINPUT(wVk=hexKeyCode,
                             dwFlags=KEYEVENTF_KEYUP))

@@ -56,7 +56,6 @@ def find_mobs_on_platform(rects, platform):
 
 
 def filter_mobs_by_height(rects, player):
-
     mob_instances = [obj for obj in rects if abs(obj.center_y - player.center_y) < 150]
     return mob_instances
 
@@ -71,6 +70,25 @@ def find_closest_mob(rects, player):
             if distance < closest_distance:
                 closest_distance = distance
                 closest_rect = rect
+
+    return closest_rect
+
+
+def find_closest_path(rects, platform):
+    closest_distance = float('inf')
+    closest_rect = None
+
+    jump_height = 100
+
+    for rect in rects:
+        if rect.name == "Platform" or rect.name == "Ladder":
+            if rect is not platform:
+                if platform.y2 - rect.y1 < jump_height:  # if rect is higher or equal height
+                    if platform.center_y - rect.center_y < jump_height and platform.center_y - rect.center_y > 0:  # if rect is higher, again.
+                        distance = math.sqrt((platform.center_x - rect.center_x)**2)
+                        if distance < closest_distance:
+                            closest_distance = distance
+                            closest_rect = rect
 
     return closest_rect
 

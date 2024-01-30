@@ -76,4 +76,4 @@ class DebugPanel(LabelFrame):
         self.debug5.configure(text="Player" if values.debug_player is not None else "No Player")
         self.debug6.configure(text="Platform" if values.debug_platform is not None else "No Platform")
         self.debug7.configure(text="Mob" if values.debug_mob is not None else "No Mob")
-        self.debug8.configure(text="")
+        self.debug8.configure(text="Path" if values.debug_path is not None else "No Path")

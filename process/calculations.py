@@ -51,29 +51,48 @@ class CalculationThread(threading.Thread):
             mob: rects.Rect = rects.find_closest_mob(mob_instances, player)
             values.debug_mob = mob
 
-        # mob logic
-        if values.debug_mob is not None:
-            values.debug_x_distance = mob.center_x - player.center_x
-            values.debug_y_distance = player.center_y - mob.center_y
-            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
-            values.debug_state = "Attack"
+        # get path
+        if values.debug_platform is not None:
+            path: rects.Rect = rects.find_closest_path(instances, platform)
+            values.debug_path = path
+        elif values.debug_player is not None:
+            path: rects.Rect = rects.find_closest_path(instances, player)  # fallback if no platform is found
+            values.debug_path = path
 
-        # platform logic   
-        elif values.debug_platform is not None:
-            if player.center_x < platform.x1:
-                values.debug_x_distance = platform.x1 - player.center_x
-            else:
-                values.debug_x_distance = platform.x2 - player.center_x
-            values.debug_y_distance = player.center_y - platform.center_y
-            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
-            values.debug_state = "Platform"
+        # # mob logic
+        # if values.debug_mob is not None:
+        #     values.debug_x_distance = mob.center_x - player.center_x
+        #     values.debug_y_distance = player.center_y - mob.center_y
+        #     values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
+        #     values.debug_state = "Attack"
 
+        # # platform logic   
+        # el
+        
+        if values.debug_path is not None:
+            if player.center_x < path.center_x:  # player is left of platform
+                x = path.x1 - player.x2
+                # x = path.center_x - player.x2
+                values.debug_x_distance = 0 if x < -30 else x  # player is close enough
+            else:  # player is right of platform
+                x = path.x2 - player.x1
+                # x = path.center_x - player.x1
+                values.debug_x_distance = 0 if x > 30 else x  # player is close enough
+
+            values.debug_y_distance = player.y2 - path.y1  # inverted, so positive is up, negative is down.
+            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT  # think this is flipped
+            values.debug_state = "Navigate"
+
+        # searching logic
+        elif values.debug_player is None:
+            values.debug_state = "Search"
 
 
     def clear_values(self):
         values.debug_player = None
         values.debug_platform = None
         values.debug_mob = None
+        values.debug_path = None
         values.debug_x_distance = 0
         values.debug_y_distance = 0
         values.debug_direction = None

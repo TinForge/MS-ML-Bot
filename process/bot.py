@@ -31,10 +31,6 @@ class BotThread(threading.Thread):
                 time.sleep(0.001)  # Adjustable
 
 
-    """
-
-    """
-
 
     def calculate(self):
         if values.window_active is False:
@@ -43,17 +39,9 @@ class BotThread(threading.Thread):
         x_distance = values.debug_x_distance
         y_distance = values.debug_y_distance
         direction = values.debug_direction
-        player = values.debug_player
-        mob = values.debug_mob
-
-        if mob is None:
-            values.debug_state = "Navigate"
-        else: 
-            values.debug_state = "Attack"
 
 
-        # if has target
-        if player is not None and mob is not None:
+        if values.debug_state == "Attack":
 
             # if too far away
             if abs(x_distance) > 350:
@@ -89,15 +77,42 @@ class BotThread(threading.Thread):
                 values.debug_action = "move away"
                 self.move(keyboard.VK_RIGHT if direction == keyboard.VK_LEFT else keyboard.VK_LEFT)
 
-            # spam loot
-            if values.looting_active:
-                self.loot()
 
-        # if no target
-        elif player is not None and mob is None:
+        elif values.debug_state == "Navigate":
+            # if too far away
+            if abs(x_distance) > 350:
+                values.debug_action = "move closer"
+                self.dash(direction)
+                self.move(direction)
+
+            # if far away
+            elif abs(x_distance) > self.profile.platform_range:
+                values.debug_action = "move closer"
+                self.move(direction)
+
+            # if too close
+            elif abs(x_distance) == 0 and (y_distance < self.profile.platform_height):
+                values.debug_action = "jump"
+                self.move(None)
+                self.jump()
+                # self.up()
+
+            # if within range
+            elif abs(x_distance) < self.profile.platform_range and (y_distance < self.profile.platform_height):
+                values.debug_action = "moving jump"
+                self.move(None)
+                self.move_jump(direction)
+                # self.up()
+
+        elif values.debug_state == "Search":
             if values.randomizer_active:
                 values.debug_action = "random move"
                 self.random_move()
+                self.up()
+                
+        # spam loot
+        if values.looting_active:
+            self.loot()
 
 
     def clear_values(self):
@@ -140,6 +155,19 @@ class BotThread(threading.Thread):
         self.old_direction = direction
 
 
+    def up(self):
+        keyboard.PressKey(keyboard.VK_UP)
+        time.sleep(1)
+        keyboard.ReleaseKey(keyboard.VK_UP)
+
+
+    def jump(self):
+        keyboard.PressKey(keyboard.VK_MENU)
+        time.sleep(0.25)
+        keyboard.ReleaseKey(keyboard.VK_MENU)
+        time.sleep(0.25)
+
+
     def random_jump(self, chance):
         i = random.randint(1, chance)
         if i == chance:
@@ -149,10 +177,12 @@ class BotThread(threading.Thread):
 
     def move_jump(self, direction):
         keyboard.PressKey(direction)
+        time.sleep(0.1)
         keyboard.PressKey(keyboard.VK_MENU)
         time.sleep(0.25)
         keyboard.ReleaseKey(keyboard.VK_MENU)
         keyboard.ReleaseKey(direction)
+        time.sleep(0.4)
 
     def move_jump_attack(self, direction):
         keyboard.PressKey(direction)
