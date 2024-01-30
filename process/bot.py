@@ -112,10 +112,16 @@ class BotThread(threading.Thread):
             if values.randomizer_active:
                 values.debug_action = "random move"
                 self.random_move()
+                i = random.randint(1, 5)
+                if i == 1:
+                    self.drop()
                 
         # spam loot
         if values.looting_active:
             self.loot()
+
+
+    # -----------------------------------------------
 
 
     def clear_values(self):
@@ -123,6 +129,17 @@ class BotThread(threading.Thread):
 
 
     # -----------------------------------------------
+
+
+    
+    def drop(self):
+        keyboard.PressKey(keyboard.VK_DOWN)            
+        for i in range(2):
+            keyboard.PressKey(keyboard.VK_MENU)
+            time.sleep(0.5)
+            keyboard.ReleaseKey(keyboard.VK_MENU)
+            time.sleep(0.1)
+        keyboard.ReleaseKey(keyboard.VK_UP)
 
 
     def dash(self, direction):
@@ -159,8 +176,8 @@ class BotThread(threading.Thread):
 
 
     def up(self):
-        keyboard.PressKey(keyboard.VK_UP)
-        time.sleep(1)
+        keyboard.PressKey(keyboard.VK_UP)            
+        time.sleep(1.4)
         keyboard.ReleaseKey(keyboard.VK_UP)
 
 
@@ -172,7 +189,7 @@ class BotThread(threading.Thread):
         keyboard.ReleaseKey(keyboard.VK_MENU)
         time.sleep(0.25)
         if up:
-            time.sleep(1)
+            time.sleep(1.4)
             keyboard.ReleaseKey(keyboard.VK_UP)
 
     def random_jump(self, chance):
@@ -193,7 +210,7 @@ class BotThread(threading.Thread):
         keyboard.ReleaseKey(direction)
         time.sleep(0.4)
         if up:
-            time.sleep(1)
+            time.sleep(1.4)
             keyboard.ReleaseKey(keyboard.VK_UP)
 
     def move_jump_attack(self, direction):
@@ -229,7 +246,7 @@ class BotThread(threading.Thread):
         i = random.randint(1, 2)
         direction = keyboard.VK_LEFT if i == 1 else keyboard.VK_RIGHT
         keyboard.PressKey(direction)
-        time.sleep(0.2)
+        time.sleep(0.25)
         keyboard.ReleaseKey(direction)
 
 

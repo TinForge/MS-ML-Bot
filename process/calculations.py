@@ -14,6 +14,8 @@ class CalculationThread(threading.Thread):
         instance = self
         self.is_running = False
         self.clear_cache = True
+        self.idle_limit = 35  # consecutive frames without any detections
+        self.idle_count = 0 
 
 
     def run(self):
@@ -65,16 +67,15 @@ class CalculationThread(threading.Thread):
             values.debug_y_distance = player.center_y - mob.center_y
             values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
             values.debug_state = "Attack"
+            self.idle_count = 0
 
         # platform logic   
         elif values.debug_path is not None:
             if player.center_x < path.center_x:  # player is left of platform
                 x = path.x1 - player.x2
-                # x = path.center_x - player.x2
                 values.debug_x_distance = 0 if x < -30 else x  # player is close enough
             else:  # player is right of platform
                 x = path.x2 - player.x1
-                # x = path.center_x - player.x1
                 values.debug_x_distance = 0 if x > 30 else x  # player is close enough
 
             values.debug_on_ladder = values.debug_path.name == "Ladder"
@@ -82,13 +83,18 @@ class CalculationThread(threading.Thread):
                 values.debug_y_distance = player.y2 - path.y2
             else:
                 values.debug_y_distance = player.y2 - path.y1
+                
             values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
             values.debug_state = "Navigate"
-
+            self.idle_count = 0
 
         # searching logic
-        elif values.debug_player is None:
-            values.debug_state = "Search"
+        elif values.debug_player is None or (values.debug_mob is None and values.debug_path is None):
+            # elif values.debug_player is None:
+            if values.debug_state == "Attack" or values.debug_state == "Navigate":
+                self.idle_count += 1
+                if self.idle_count > self.idle_limit:
+                    values.debug_state = "Search"
 
 
     def clear_values(self):
