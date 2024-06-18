@@ -7,6 +7,7 @@ The bot performs basic attack and navigation behaviors using an object detection
 
 ## Features
 - YoloV5 model inference
+- Detects player, mob, ground, ladder classifications
 - Processing inferred data into rect class
 - Split threads for performance optimization
 - Window functions for application detection & control
@@ -16,8 +17,7 @@ The bot performs basic attack and navigation behaviors using an object detection
 - Generated keyboard input to simulate player actions
 
 ## Usage
-For a demonstration & overview of the project, see the video:
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Nc58gaySf6s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+For a demonstration & overview of the project, [watch my video here](https://www.youtube.com/watch?v=Nc58gaySf6s).
 
 ## Disclaimer
 Please note that this project is provided as-is, without any guarantee of support or maintenance. This project has not been tested for distribution and is not officially supported. Use it at your own discretion.
