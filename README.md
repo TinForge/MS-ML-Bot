@@ -3,11 +3,11 @@ Maplestory Machine Learning Bot
 
 ## Setup
 
-Requires Windows and **Python 3.10 (64-bit)** installed with the **tcl/tk** option (needed for the GUI).
-An NVIDIA GPU is recommended; PyTorch is pinned to the CUDA 11.8 build.
+Requires Windows and **Python 3.13 (64-bit)** installed with the **tcl/tk** option (needed for the GUI).
+An NVIDIA GPU (RTX 20-series or newer) is recommended; PyTorch is pinned to the CUDA 13.0 build, which only needs an up-to-date NVIDIA driver (no CUDA Toolkit install).
 
 ```
-py -3.10 -m venv .venv
+py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 .venv\Scripts\python.exe -m pip install -e . --no-deps
 ```
@@ -15,7 +15,7 @@ py -3.10 -m venv .venv
 The last command registers the project's packages (`gui`, `data`, `process`, `tools`, `yolov5`) so scripts can be run directly from an IDE.
 Re-run it if the repository folder moves. For linting/formatting tools, install `requirements-dev.txt` instead of `requirements.txt`.
 
-The YOLOv5 code is fetched by `torch.hub` on first run and cached in `%USERPROFILE%\.cache\torch\hub`.
+The YOLOv5 code is fetched by `torch.hub` on first run, pinned to a specific commit in `yolov5/model.py`, and cached in `%USERPROFILE%\.cache\torch\hub`.
 
 ## Running
 

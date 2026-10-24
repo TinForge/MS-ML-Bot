@@ -1,30 +1,29 @@
-# Python 3.10 (64-bit) with Tcl/Tk installed
+# Python 3.13 (64-bit) with Tcl/Tk installed
 # Install: python -m pip install -r requirements.txt
 
-# PyTorch CUDA 11.8 builds
---extra-index-url https://download.pytorch.org/whl/cu118
+# PyTorch CUDA 13.0 builds (supports RTX 20-series / sm_75 and newer)
+--extra-index-url https://download.pytorch.org/whl/cu130
 
 # App
-Pillow==9.3.0
-pywin32==305
-sv-ttk==2.4
+Pillow==12.3.0
+pywin32==312
+sv-ttk==2.6.1
 
 # ML inference
-torch==2.0.1+cu118
-torchvision==0.15.2+cu118
+torch==2.14.1+cu130
+torchvision==0.29.1+cu130
 
 # Required by the YOLOv5 code loaded through torch.hub (yolov5/model.py)
-gitpython==3.1.31
-matplotlib==3.7.1
-numpy==1.24.3
-opencv-python==4.7.0.72
-pandas==2.0.1
-psutil==5.9.5
-PyYAML==6.0
-requests==2.30.0
-scipy==1.10.1
-seaborn==0.12.2
-setuptools==67.7.2
-thop==0.1.1.post2209072238
-tqdm==4.65.0
-ultralytics==8.0.103
+matplotlib==3.11.2
+numpy==2.5.2
+opencv-python==5.0.0.93
+packaging==26.3
+pandas==3.1.0
+psutil==7.2.2
+PyYAML==6.0.3
+requests==2.34.2
+scipy==1.18.1
+seaborn==0.13.2
+setuptools==78.1.0
+ultralytics==8.4.184
+ultralytics-thop==2.2.3

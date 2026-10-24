@@ -5,10 +5,13 @@ from PIL import ImageGrab
 from tools import overlay
 from data import values, rects
 
+# YOLOv5 code fetched by torch.hub, pinned to a master commit (newest tag v7.0 predates torch 2.6 support)
+yolov5_repo = 'ultralytics/yolov5:af08ba156fd58ed5b0fe7e4e58a22c72c3cdd0ce'
+
 
 class Model:
     def __init__(self):
-        self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='yolov5/weights.pt')
+        self.model = torch.hub.load(yolov5_repo, 'custom', path='yolov5/weights.pt', trust_repo=True)
 
         if torch.cuda.is_available():
             self.model.cuda()
