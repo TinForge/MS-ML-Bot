@@ -21,16 +21,22 @@ class Model:
         # self.model.imgsz = 1280  # doesn't help
         self.model.iou = values.model_iou
         self.model.conf = values.model_conf
+        self.last_frame = None  # Last grabbed game area, None if the grab wasn't cropped to it
         # self.model.iou = 0.7  # NMS IoU threshold (0-1)        0.45 good, 0.65 good
         # self.model.conf = 0.35  # confidence threshold (0-1)     0.6 good, 0.4 good
 
 
     def run(self, crop=True, debug=True):
         detections = []
-        if crop:
-            im = ImageGrab.grab(bbox=values.window_rect)  # Provides rect of maplestory window, however the rects need to be localized back to window coords
+        window_rect = values.window_rect  # Read once, the GUI thread keeps updating it
+        if crop and window_rect is not None:
+            im = ImageGrab.grab(bbox=window_rect)  # Crop to the game client area
+            offset_x, offset_y = window_rect[0], window_rect[1]  # Shifts detections back to screen coords
+            self.last_frame = im
         else:
             im = ImageGrab.grab()  # Data will not be as accurate if image set is not cropped
+            offset_x, offset_y = 0, 0
+            self.last_frame = None
 
         self.model.iou = values.model_iou
         self.model.conf = values.model_conf
@@ -77,7 +83,8 @@ class Model:
                 name = "Unknown"
                 color = 'white'
 
-            r = rects.Rect(name, color, cord_thres[x][0], cord_thres[x][1], cord_thres[x][2], cord_thres[x][3], round(confidences[x][4], 2), int(time.time() * 1000))
+            x1, y1, x2, y2 = cord_thres[x][0] + offset_x, cord_thres[x][1] + offset_y, cord_thres[x][2] + offset_x, cord_thres[x][3] + offset_y
+            r = rects.Rect(name, color, x1, y1, x2, y2, round(confidences[x][4], 2), int(time.time() * 1000))
             detections.append(r)
 
         return detections

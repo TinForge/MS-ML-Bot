@@ -4,22 +4,24 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import window
-from gui.panel import application_panel, process_panel, debug_panel, utility_panel, test_panel, overlay_panel, bot_panel
+from gui.panel import application_panel, process_panel, debug_panel, diagnostics_panel, stats_panel, utility_panel, test_panel, overlay_panel, bot_panel
 from data import values
 
 
 class MainPage(Frame):
     def __init__(self, app: window.Window):
         self.app = app
-        self.app.tk.geometry("300x700")
+        self.app.tk.geometry("300x800")
         Frame.__init__(self, app.tk)
         #
         self.applicationPanel = application_panel.ApplicationPanel(self)
         self.utilityPanel = utility_panel.UtilityPanel(self)
         self.controlPanel = process_panel.ProcessPanel(self)
         self.botPanel = bot_panel.BotPanel(self)
+        self.statsPanel = stats_panel.StatsPanel(self)
         self.overlayPanel = overlay_panel.OverlayPanel(self)
         self.debugPanel = debug_panel.DebugPanel(self)
+        self.diagnosticsPanel = diagnostics_panel.DiagnosticsPanel(self)
 
 
     def refresh(self):
@@ -27,8 +29,10 @@ class MainPage(Frame):
         self.utilityPanel.refresh()
         self.controlPanel.refresh()
         self.botPanel.refresh()
+        self.statsPanel.refresh()
         self.overlayPanel.refresh()
         self.debugPanel.refresh()
+        self.diagnosticsPanel.refresh()
 
 
 def main():

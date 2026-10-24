@@ -7,7 +7,10 @@ import math
 
 from data import values
 from data import trackers
+from tools import stat_reader
 from yolov5 import model
+
+stats_interval = 0.25  # Seconds between HP/MP reads while detection is off
 
 
 class DetectionThread(threading.Thread):
@@ -17,16 +20,29 @@ class DetectionThread(threading.Thread):
         instance = self
         self.is_running = False
         self.model = model.Model()
+        self.last_stats_time = 0
 
     def run(self):
         while window.instance is not None:
             if self.is_running is False:
                 time.sleep(0.01)  # Adjustable
+                self.read_stats(None)
             else:
                 time.sleep(0.01)  # Adjustable
                 detections = self.model.run(True, False)
                 values.detected_instances = detections
+                self.read_stats(self.model.last_frame)
                 self.process()
+
+
+    def read_stats(self, frame):  # Reuses the inference frame when there is one, otherwise grabs at a slower rate
+        if frame is None and time.time() - self.last_stats_time < stats_interval:
+            return
+        self.last_stats_time = time.time()
+        if frame is not None:
+            values.player_hp, values.player_mp = stat_reader.read_frame(frame)
+        else:
+            values.player_hp, values.player_mp = stat_reader.read(values.window_rect)
 
 
     def process(self):

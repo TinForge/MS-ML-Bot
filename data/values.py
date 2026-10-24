@@ -8,7 +8,12 @@ from process import calculations, detection, bot
 
 window_found = False
 window_active = False
-window_rect = None
+window_rect = None  # Game client area in screen pixels (x1, y1, x2, y2), None if not found
+show_window_rect = False
+
+# Set by detection.py from the status bar, (current, max) or None if not readable
+player_hp = None
+player_mp = None
 
 detection_active = False
 calculations_active = False
@@ -47,7 +52,7 @@ def update():
     global window_active
     window_active = window_functions.is_maple_active()
     global window_rect
-    window_rect = window_functions.get_maple_position()
+    window_rect = window_functions.get_maple_client_rect()
 
     # Process
     global detection_active

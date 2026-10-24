@@ -43,8 +43,12 @@ class OverlayPanel(LabelFrame):
         self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
 
         if overlay.instance is not None:
+            overlay.instance.clear_shapes()
+
+            if values.show_window_rect and values.window_rect is not None:
+                overlay.instance.render_window(values.window_rect)
+
             if values.detected_instances is not None:
-                overlay.instance.clear_shapes()
 
                 if "Raw Detect" in self.selected_options:
                     overlay.instance.render_box(values.detected_instances)

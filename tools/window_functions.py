@@ -39,6 +39,17 @@ def get_maple_position():
         return win32gui.GetWindowRect(get_maple_window())
 
 
+def get_maple_client_rect():  # Game area without title bar/borders, in screen pixels (x1, y1, x2, y2)
+    if is_maple_found() is False or is_maple_minimized():
+        return None
+    hwnd = get_maple_window()
+    _, _, width, height = win32gui.GetClientRect(hwnd)
+    if width == 0 or height == 0:
+        return None
+    x, y = win32gui.ClientToScreen(hwnd, (0, 0))
+    return (x, y, x + width, y + height)
+
+
 def snap_maple_position():
     if is_maple_found() is False:
         return False

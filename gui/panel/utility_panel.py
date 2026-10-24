@@ -3,7 +3,6 @@
 from tkinter import *
 from tkinter.ttk import *
 
-from data import values
 from tools import window_functions
 from tools.persistent import save_data
 
@@ -42,4 +41,3 @@ class UtilityPanel(LabelFrame):
 
     def refresh(self):
         pass
-        # self.window_rect_display['text'] = str(values.window_rect)

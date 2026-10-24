@@ -49,6 +49,12 @@ class Overlay:
             #  canvas.create_text(x, y, text=texto, font=("Arial", 12), fill="black")
         self.canvas.pack()
 
+    def render_window(self, window_rect, color='lime', thickness=2):
+        x1, y1, x2, y2 = window_rect
+        self.shapes.add(self.canvas.create_rectangle(x1, y1, x2 - 1, y2 - 1, fill='', outline=color, width=thickness))
+        self.shapes.add(self.canvas.create_text(x1 + 6, y1 + 6, anchor=NW, text="%dx%d @ (%d, %d)" % (x2 - x1, y2 - y1, x1, y1), fill=color, font=("Arial", 12)))
+        self.canvas.pack()
+
     def render_circle(self, new_rects: list, offset=6):
         r: rects.Rect
         for r in new_rects:
