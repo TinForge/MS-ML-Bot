@@ -4,14 +4,14 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import references
-from data import values
+from data import config, values
 from tools import keyboard
 from tools.persistent import save_data
 
 import time
 
-drop_display_time = 1.5  # Seconds a drop stays visible
-potion_display_time = 1.5  # Seconds the potion indicator stays visible
+drop_display_time = config.drop_display_time  # Seconds a drop stays visible
+potion_display_time = config.potion_display_time  # Seconds the potion indicator stays visible
 value_width = 11  # Characters reserved so the row doesn't shift as text changes, e.g. "29999/30000"
 drop_width = 6  # e.g. "▼ 9999"
 

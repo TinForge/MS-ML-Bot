@@ -1,10 +1,10 @@
 # Measures how long processes take, for the Diagnostics panel
 
 import time
-from data import values
+from data import config, values
 
-smoothing = 0.1  # Weight of the newest sample, so the numbers are readable rather than flickering
-stale_time = 1.0  # Seconds without a sample before a timing counts as stopped
+smoothing = config.timing_smoothing  # Weight of the newest sample, so the numbers are readable rather than flickering
+stale_time = config.timing_stale_time  # Seconds without a sample before a timing counts as stopped
 
 
 def record(name, start):  # start is a time.perf_counter() value taken before the work

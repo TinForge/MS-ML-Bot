@@ -5,6 +5,7 @@
 --extra-index-url https://download.pytorch.org/whl/cu130
 
 # App
+dxcam==0.3.0
 Pillow==12.3.0
 pywin32==312
 sv-ttk==2.6.1

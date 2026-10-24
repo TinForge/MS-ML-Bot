@@ -1,0 +1,26 @@
+# MS-ML-Bot settings
+# Edit and restart the app. Anything missing or invalid falls back to its default (shown here).
+
+[detection]
+# While Model Detection is off, the bot still reads HP/MP, the name and the player from its own screenshots.
+stats_interval = 0.25   # Seconds between reads while the player box is hidden (HP/MP don't need to be smooth)
+player_interval = 0.05  # Seconds between reads while the player box is shown (keeps the box following smoothly)
+
+[player]
+# The player is found by matching the name from the status bar against nametags on screen.
+search_margin = [120, 80]  # Pixels (x, y) around the last nametag searched first; larger keeps fast movement on the fast path
+character_size = [50, 66]  # Approximate sprite size (width, height) drawn above the nametag
+nametag_tolerance = 0.05   # Fraction of mismatched pixels allowed when matching the nametag
+
+[potion]
+cooldown = 3.0     # Seconds before the same key can be pressed again (shared when HP and MP use the same key)
+confirm_reads = 4  # Consecutive fresh low readings needed before using a potion, so one misread doesn't use one
+
+[display]
+window_width = 390        # Bot window width in pixels
+drop_display_time = 1.5   # Seconds the red HP/MP drop indicator stays visible
+potion_display_time = 1.5 # Seconds the green potion indicator stays visible
+
+[frame_times]
+smoothing = 0.1   # Weight of each new sample (0-1); lower is steadier, higher reacts faster
+stale_time = 1.0  # Seconds without a sample before a timing shows "-"

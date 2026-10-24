@@ -4,11 +4,11 @@ from gui import window
 import time
 import random
 import threading
-from data import values, profiles
+from data import config, values, profiles
 from tools import keyboard
 
-potion_cooldown = 3.0  # Seconds before the same key can be pressed again, shared when HP and MP use the same key
-potion_confirm_reads = 2  # Consecutive fresh low readings needed, so a single misread doesn't use a potion
+potion_cooldown = config.potion_cooldown  # Seconds before the same key can be pressed again, shared when HP and MP use the same key
+potion_confirm_reads = config.potion_confirm_reads  # Consecutive fresh low readings needed, so a single misread doesn't use a potion
 
 
 class BotThread(threading.Thread):

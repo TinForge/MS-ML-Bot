@@ -5,9 +5,9 @@ from tkinter.ttk import *
 
 from gui import window
 from gui.panel import application_panel, process_panel, debug_panel, diagnostics_panel, frame_times_panel, stats_panel, utility_panel, test_panel, overlay_panel, bot_panel
-from data import values
+from data import config, values
 
-window_width = 390  # Fixed so changing text doesn't resize the window
+window_width = config.window_width  # Fixed so changing text doesn't resize the window
 
 
 class MainPage(Frame):

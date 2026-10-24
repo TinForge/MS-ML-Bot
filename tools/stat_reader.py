@@ -3,7 +3,7 @@
 import re
 import cv2
 import numpy as np
-from PIL import ImageGrab
+from tools import screen
 
 search_height = 80  # Status bar sits at the bottom of the game area
 text_width = 90  # Room for "[99999/99999]" after the label
@@ -100,7 +100,7 @@ def grab(window_rect):  # Just the bottom of the game area, or None if not found
     if window_rect is None:
         return None
     x1, y1, x2, y2 = window_rect
-    return ImageGrab.grab(bbox=(x1, max(y1, y2 - search_height), x2, y2))
+    return screen.grab((x1, max(y1, y2 - search_height), x2, y2))
 
 
 def read(window_rect):  # Grabs the bottom of the game area itself

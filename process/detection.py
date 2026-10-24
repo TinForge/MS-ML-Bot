@@ -5,13 +5,12 @@ import time
 import threading
 import math
 
-from PIL import ImageGrab
-
-from data import values
+from data import config, values
 from data import trackers
-from tools import stat_reader, player_finder, timer
+from tools import stat_reader, player_finder, screen, timer
 
-stats_interval = 0.25  # Seconds between HP/MP reads while detection is off
+stats_interval = config.stats_interval  # Seconds between reads while detection is off and the player box is hidden
+player_interval = config.player_interval  # Same, while the player box is shown
 
 
 class DetectionThread(threading.Thread):
@@ -22,6 +21,7 @@ class DetectionThread(threading.Thread):
         self.is_running = False
         self.model = None  # Loaded the first time detection runs, as importing torch and YOLOv5 takes seconds
         self.last_stats_time = 0
+        self.last_nametag = None  # Where the player's nametag was last found, in game area coords
 
     def run(self):
         while window.instance is not None:
@@ -51,16 +51,16 @@ class DetectionThread(threading.Thread):
 
     def read_stats(self, frame, frame_rect):  # Reuses the inference frame when there is one, otherwise grabs at a slower rate
         if frame is None:
-            if time.time() - self.last_stats_time < stats_interval:
+            full = values.show_player_rect  # Finding the player needs the whole game area, the stats only its bottom
+            if time.time() - self.last_stats_time < (player_interval if full else stats_interval):  # Faster while the player box needs to follow smoothly
                 return
             frame_rect = values.window_rect
-            full = values.show_player_rect  # Finding the player needs the whole game area, the stats only its bottom
         else:
             full = True
         self.last_stats_time = time.time()
         start = time.perf_counter()
         if frame is None and frame_rect is not None:
-            frame = ImageGrab.grab(bbox=frame_rect) if full else stat_reader.grab(frame_rect)
+            frame = screen.grab(frame_rect) if full else stat_reader.grab(frame_rect)
         if frame is None:
             values.player_hp = values.player_mp = values.player_name = None
         else:
@@ -76,8 +76,12 @@ class DetectionThread(threading.Thread):
             values.player_rect = None
             return
         start = time.perf_counter()
-        rect = player_finder.find_player(frame, values.player_name)
-        values.player_rect = None if rect is None else (rect[0] + frame_rect[0], rect[1] + frame_rect[1], rect[2] + frame_rect[0], rect[3] + frame_rect[1])
+        self.last_nametag = player_finder.find_nametag(frame, values.player_name, self.last_nametag)
+        if self.last_nametag is None:
+            values.player_rect = None
+        else:
+            rect = player_finder.character_rect(self.last_nametag, values.player_name)
+            values.player_rect = (rect[0] + frame_rect[0], rect[1] + frame_rect[1], rect[2] + frame_rect[0], rect[3] + frame_rect[1])
         timer.record("Player", start)
 
 

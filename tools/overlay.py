@@ -2,8 +2,11 @@
 
 from tkinter import *
 from tkinter import Canvas
+import ctypes
 from gui import window
 from data import rects
+
+WDA_EXCLUDEFROMCAPTURE = 0x11  # Keeps the overlay out of screen captures, so detection never sees its own drawings
 
 
 class Overlay:
@@ -21,6 +24,8 @@ class Overlay:
         self.frame.wm_attributes('-transparentcolor', '#add123')
         self.frame.wm_attributes("-topmost", True)
         self.frame.wm_attributes("-disabled", True)
+        self.frame.update_idletasks()  # Creates the window handle
+        ctypes.windll.user32.SetWindowDisplayAffinity(ctypes.windll.user32.GetParent(self.frame.winfo_id()), WDA_EXCLUDEFROMCAPTURE)
         #
         self.canvas = Canvas(self.frame, bg='#add123', bd=0, highlightthickness=0)
         self.canvas.config(width=self.width, height=self.height)  # fill screen

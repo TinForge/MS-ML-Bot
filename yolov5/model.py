@@ -2,7 +2,7 @@
 import time
 import torch
 from PIL import ImageGrab
-from tools import overlay, timer
+from tools import overlay, screen, timer
 from data import values, rects
 
 # YOLOv5 code fetched by torch.hub, pinned to a master commit (newest tag v7.0 predates torch 2.6 support)
@@ -32,7 +32,7 @@ class Model:
         start = time.perf_counter()
         window_rect = values.window_rect  # Read once, the GUI thread keeps updating it
         if crop and window_rect is not None:
-            im = ImageGrab.grab(bbox=window_rect)  # Crop to the game client area
+            im = screen.grab(window_rect)  # Crop to the game client area
             offset_x, offset_y = window_rect[0], window_rect[1]  # Shifts detections back to screen coords
             self.last_frame = im
             self.last_frame_rect = window_rect

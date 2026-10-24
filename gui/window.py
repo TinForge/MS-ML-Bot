@@ -48,7 +48,7 @@ def on_closing():
 
 def main(manual_loop=False):  # Option to manually loop
     global instance
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # Physical pixels, so window rects match ImageGrab at any display scaling
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # Physical pixels, so window rects match screen captures at any display scaling
     instance = Window()
     instance.tk.protocol("WM_DELETE_WINDOW", on_closing)
     if manual_loop is False:

@@ -26,3 +26,8 @@ Run from the repository root, as administrator (the game ignores input from non-
 ```
 
 In the app's Application panel, set the window name to the game window's title (e.g. `MapleStory`).
+
+## Configuration
+
+Tunable values (read rates, player search, potion timing, display) are in [`config.toml`](config.toml), with a comment explaining each one.
+Edit it and restart the app; anything missing or invalid falls back to its default.
