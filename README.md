@@ -1,23 +1,28 @@
 # MS-ML-Bot
-![Watch the video](https://img.youtube.com/vi/Nc58gaySf6s/0.jpg)
+Maplestory Machine Learning Bot
 
-## Description
-Personal project that utilizes machine learning to create a bot for Maplestory. 
-The bot performs basic attack and navigation behaviors using an object detection model trained on YoloV5n.
+## Setup
 
-## Features
-- YoloV5 model inference
-- Detects player, mob, ground, ladder classifications
-- Processing inferred data into rect class
-- Split threads for performance optimization
-- Window functions for application detection & control
-- Tkinter gui
-- Debug overlay for drawing rects
-- Basic decision-making logic based on the processed data
-- Generated keyboard input to simulate player actions
+Requires Windows and **Python 3.10 (64-bit)** installed with the **tcl/tk** option (needed for the GUI).
+An NVIDIA GPU is recommended; PyTorch is pinned to the CUDA 11.8 build.
 
-## Usage
-For a demonstration & overview of the project, [watch my video here](https://www.youtube.com/watch?v=Nc58gaySf6s).
+```
+py -3.10 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install -e . --no-deps
+```
 
-## Disclaimer
-Please note that this project is provided as-is, without any guarantee of support or maintenance. This project has not been tested for distribution and is not officially supported. Use it at your own discretion.
+The last command registers the project's packages (`gui`, `data`, `process`, `tools`, `yolov5`) so scripts can be run directly from an IDE.
+Re-run it if the repository folder moves. For linting/formatting tools, install `requirements-dev.txt` instead of `requirements.txt`.
+
+The YOLOv5 code is fetched by `torch.hub` on first run and cached in `%USERPROFILE%\.cache\torch\hub`.
+
+## Running
+
+Run from the repository root, as administrator (the game ignores input from non-elevated processes):
+
+```
+.venv\Scripts\python.exe -m process.bootstrapper
+```
+
+In the app's Application panel, set the window name to the game window's title (e.g. `MapleStory`).
