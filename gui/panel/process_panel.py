@@ -44,6 +44,9 @@ class ProcessPanel(LabelFrame):
             bot.instance.is_running = not bot.instance.is_running
 
     def refresh(self):
-        self.detection_active.configure(image=(references.red_icon, references.green_icon)[values.detection_active])
+        if values.model_loading:  # Yellow while the model loads on first use
+            self.detection_active.configure(image=references.yellow_icon)
+        else:
+            self.detection_active.configure(image=(references.red_icon, references.green_icon)[values.detection_active])
         self.calculations_active.configure(image=(references.red_icon, references.green_icon)[values.calculations_active])
         self.bot_active.configure(image=(references.red_icon, references.green_icon)[values.bot_active])

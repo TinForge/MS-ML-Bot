@@ -22,6 +22,7 @@ class Model:
         self.model.iou = values.model_iou
         self.model.conf = values.model_conf
         self.last_frame = None  # Last grabbed game area, None if the grab wasn't cropped to it
+        self.last_frame_rect = None  # Screen rect last_frame was grabbed from
         # self.model.iou = 0.7  # NMS IoU threshold (0-1)        0.45 good, 0.65 good
         # self.model.conf = 0.35  # confidence threshold (0-1)     0.6 good, 0.4 good
 
@@ -34,6 +35,7 @@ class Model:
             im = ImageGrab.grab(bbox=window_rect)  # Crop to the game client area
             offset_x, offset_y = window_rect[0], window_rect[1]  # Shifts detections back to screen coords
             self.last_frame = im
+            self.last_frame_rect = window_rect
         else:
             im = ImageGrab.grab()  # Data will not be as accurate if image set is not cropped
             offset_x, offset_y = 0, 0

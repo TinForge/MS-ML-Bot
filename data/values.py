@@ -15,11 +15,15 @@ show_window_rect = False
 player_hp = None
 player_mp = None
 stats_read_id = 0  # Increments with every HP/MP reading
+player_name = None  # Name pixels (bool array) from the status bar
+player_rect = None  # Player character in screen pixels (x1, y1, x2, y2), found by their nametag
+show_player_rect = False
 
 # Set through tools/timer.py, name: (smoothed ms, time.time() of last sample)
 timings = {}
 
 detection_active = False
+model_loading = False  # Detection is on but its model is still loading (first use)
 calculations_active = False
 bot_active = False
 
@@ -69,9 +73,10 @@ def update():
     window_rect = window_functions.get_maple_client_rect()
 
     # Process
-    global detection_active
+    global detection_active, model_loading
     if detection.instance:
         detection_active = detection.instance.is_running
+        model_loading = detection.instance.is_running and detection.instance.model is None
     global calculations_active
     if calculations.instance:
         calculations_active = calculations.instance.is_running

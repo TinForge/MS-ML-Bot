@@ -48,6 +48,9 @@ class OverlayPanel(LabelFrame):
             if values.show_window_rect and values.window_rect is not None:
                 overlay.instance.render_window(values.window_rect)
 
+            if values.show_player_rect and values.player_rect is not None:
+                overlay.instance.render_player(values.player_rect)
+
             if values.detected_instances is not None:
 
                 if "Raw Detect" in self.selected_options:

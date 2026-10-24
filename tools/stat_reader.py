@@ -96,11 +96,18 @@ def read_frame(im):  # Reads from an already grabbed image of the game area; ret
     return read_value(mask, 'HP'), read_value(mask, 'MP')
 
 
-def read(window_rect):  # Grabs the bottom of the game area itself
+def grab(window_rect):  # Just the bottom of the game area, or None if not found
     if window_rect is None:
-        return None, None
+        return None
     x1, y1, x2, y2 = window_rect
-    return read_frame(ImageGrab.grab(bbox=(x1, max(y1, y2 - search_height), x2, y2)))
+    return ImageGrab.grab(bbox=(x1, max(y1, y2 - search_height), x2, y2))
+
+
+def read(window_rect):  # Grabs the bottom of the game area itself
+    im = grab(window_rect)
+    if im is None:
+        return None, None
+    return read_frame(im)
 
 
 def main():
