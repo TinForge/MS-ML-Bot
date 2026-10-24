@@ -4,14 +4,15 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import window
-from gui.panel import application_panel, process_panel, debug_panel, diagnostics_panel, stats_panel, utility_panel, test_panel, overlay_panel, bot_panel
+from gui.panel import application_panel, process_panel, debug_panel, diagnostics_panel, frame_times_panel, stats_panel, utility_panel, test_panel, overlay_panel, bot_panel
 from data import values
+
+window_width = 390  # Fixed so changing text doesn't resize the window
 
 
 class MainPage(Frame):
     def __init__(self, app: window.Window):
         self.app = app
-        self.app.tk.geometry("300x800")
         Frame.__init__(self, app.tk)
         #
         self.applicationPanel = application_panel.ApplicationPanel(self)
@@ -22,6 +23,10 @@ class MainPage(Frame):
         self.overlayPanel = overlay_panel.OverlayPanel(self)
         self.debugPanel = debug_panel.DebugPanel(self)
         self.diagnosticsPanel = diagnostics_panel.DiagnosticsPanel(self)
+        self.frameTimesPanel = frame_times_panel.FrameTimesPanel(self)
+        #
+        self.update_idletasks()
+        self.app.tk.geometry("%dx%d" % (window_width, self.winfo_reqheight()))  # Height fits the panels once, at startup
 
 
     def refresh(self):
@@ -33,6 +38,7 @@ class MainPage(Frame):
         self.overlayPanel.refresh()
         self.debugPanel.refresh()
         self.diagnosticsPanel.refresh()
+        self.frameTimesPanel.refresh()
 
 
 def main():

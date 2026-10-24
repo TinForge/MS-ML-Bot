@@ -2,7 +2,7 @@
 import time
 import torch
 from PIL import ImageGrab
-from tools import overlay
+from tools import overlay, timer
 from data import values, rects
 
 # YOLOv5 code fetched by torch.hub, pinned to a master commit (newest tag v7.0 predates torch 2.6 support)
@@ -28,6 +28,7 @@ class Model:
 
     def run(self, crop=True, debug=True):
         detections = []
+        start = time.perf_counter()
         window_rect = values.window_rect  # Read once, the GUI thread keeps updating it
         if crop and window_rect is not None:
             im = ImageGrab.grab(bbox=window_rect)  # Crop to the game client area
@@ -37,12 +38,15 @@ class Model:
             im = ImageGrab.grab()  # Data will not be as accurate if image set is not cropped
             offset_x, offset_y = 0, 0
             self.last_frame = None
+        timer.record("Grab", start)
 
         self.model.iou = values.model_iou
         self.model.conf = values.model_conf
 
+        start = time.perf_counter()
         results = self.model(im)
         labels, cord_thres, confidences = results.xyxy[0][:, -1].cpu().numpy(), results.xyxy[0][:, :-1].cpu().numpy(), results.pred[0][:, :-1].cpu().numpy()
+        timer.record("Inference", start)  # After .cpu(), which waits for the GPU to finish
 
         if debug:
             results.print()

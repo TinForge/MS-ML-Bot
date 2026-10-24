@@ -31,6 +31,18 @@ VK_Z = 0x5A
 VK_DELETE = 0x2E
 VK_SHIFT = 0x10
 
+VK_PRIOR = 0x21  # Page Up
+VK_NEXT = 0x22  # Page Down
+VK_END = 0x23
+VK_HOME = 0x24
+VK_INSERT = 0x2D
+
+# Keys the user can pick by name, e.g. for potions
+KEY_NAMES = {"Insert": VK_INSERT, "Delete": VK_DELETE, "Home": VK_HOME, "End": VK_END, "Page Up": VK_PRIOR, "Page Down": VK_NEXT}
+
+# Share scan codes with the numpad, so they need the extended flag to be read as the real key
+EXTENDED_KEYS = {VK_INSERT, VK_DELETE, VK_HOME, VK_END, VK_PRIOR, VK_NEXT}
+
 # C struct definitions
 
 wintypes.ULONG_PTR = wintypes.WPARAM
@@ -59,6 +71,8 @@ class KEYBDINPUT(ctypes.Structure):
         if not self.dwFlags & KEYEVENTF_UNICODE:
             self.wScan = user32.MapVirtualKeyExW(self.wVk,
                                                  MAPVK_VK_TO_VSC, 0)
+            if self.wVk in EXTENDED_KEYS:
+                self.dwFlags |= KEYEVENTF_EXTENDEDKEY
 
 
 class HARDWAREINPUT(ctypes.Structure):

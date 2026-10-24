@@ -9,14 +9,17 @@ mushroom_animated = "resources/mushroom animated.gif"
 
 green_circle = PIL.Image.open("resources/green circle.png").resize((10, 10))
 red_circle = PIL.Image.open("resources/red circle.png").resize((10, 10))
+yellow_circle = PIL.Image.open("resources/yellow circle.png").resize((10, 10))
 
 green_icon = None
 red_icon = None
+yellow_icon = None  # Enabled, but waiting on something else
 
 var_font = ("Open Sans", 10)
 
 
 def initialize_images():
-    global green_icon, red_icon
+    global green_icon, red_icon, yellow_icon
     green_icon = PIL.ImageTk.PhotoImage(green_circle)
     red_icon = PIL.ImageTk.PhotoImage(red_circle)
+    yellow_icon = PIL.ImageTk.PhotoImage(yellow_circle)

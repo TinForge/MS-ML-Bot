@@ -7,6 +7,9 @@ import threading
 from data import values, profiles
 from tools import keyboard
 
+potion_cooldown = 3.0  # Seconds before the same key can be pressed again, shared when HP and MP use the same key
+potion_confirm_reads = 2  # Consecutive fresh low readings needed, so a single misread doesn't use a potion
+
 
 class BotThread(threading.Thread):
     def __init__(self):
@@ -20,10 +23,15 @@ class BotThread(threading.Thread):
 
         self.old_direction = None
 
+        self.potion_read_id = None  # Last HP/MP reading auto potion acted on
+        self.potion_low_reads = {"HP": 0, "MP": 0}
+        self.potion_key_time = {}  # time.time() each key was last pressed
+
 
     def run(self):
         while window.instance is not None:
             self.clear_values()
+            self.auto_potion()  # Runs even when botting is off
             if self.is_running is False:
                 time.sleep(0.2)  # Adjustable
             else:
@@ -120,6 +128,35 @@ class BotThread(threading.Thread):
 
     def clear_values(self):
         values.debug_action = "nothing"
+
+
+    def auto_potion(self):
+        read_id = values.stats_read_id
+        if read_id == self.potion_read_id:  # Only act on fresh readings, never on a stale or frozen value
+            return
+        self.potion_read_id = read_id
+        if values.potion_active is False or values.window_active is False:  # Never send keys to another window
+            self.potion_low_reads = {"HP": 0, "MP": 0}
+            return
+        self.use_potion("HP", values.player_hp, values.hp_potion_threshold, values.hp_potion_key)
+        self.use_potion("MP", values.player_mp, values.mp_potion_threshold, values.mp_potion_key)
+
+    def use_potion(self, stat, value, threshold, key_name):  # Presses the key once the current value is confirmed at or below the threshold
+        if value is None or value[0] > value[1] or threshold <= 0 or value[0] > threshold:  # Unknown, implausible or fine
+            self.potion_low_reads[stat] = 0
+            return
+        self.potion_low_reads[stat] += 1
+        if self.potion_low_reads[stat] < potion_confirm_reads:
+            return
+        if time.time() - self.potion_key_time.get(key_name, 0) < potion_cooldown:
+            return
+        self.potion_low_reads[stat] = 0  # Readings from before this potion never count towards the next
+        self.potion_key_time[key_name] = time.time()
+        values.last_potion_time[stat] = time.time()
+        key = keyboard.KEY_NAMES[key_name]
+        keyboard.PressKey(key)
+        time.sleep(0.05)
+        keyboard.ReleaseKey(key)
 
 
     # -----------------------------------------------

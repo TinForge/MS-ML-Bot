@@ -26,7 +26,7 @@ class Window:
         if self.active_page is not None:
             self.active_page.destroy()
         self.active_page = page_class(self)
-        self.active_page.pack()
+        self.active_page.pack(fill="both", expand=True)  # Fill the window, so panels don't resize with their text
 
 
     def refresh(self):

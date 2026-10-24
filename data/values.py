@@ -14,6 +14,10 @@ show_window_rect = False
 # Set by detection.py from the status bar, (current, max) or None if not readable
 player_hp = None
 player_mp = None
+stats_read_id = 0  # Increments with every HP/MP reading
+
+# Set through tools/timer.py, name: (smoothed ms, time.time() of last sample)
+timings = {}
 
 detection_active = False
 calculations_active = False
@@ -21,6 +25,16 @@ bot_active = False
 
 looting_active = False
 randomizer_active = False
+potion_active = False
+
+# Set by stats_panel.py; a threshold of 0 turns that potion off
+hp_potion_threshold = 0
+mp_potion_threshold = 0
+hp_potion_key = "Delete"
+mp_potion_key = "End"
+
+# Set by bot.py, time.time() of the last potion per stat
+last_potion_time = {"HP": 0, "MP": 0}
 
 
 overlay_visible = False

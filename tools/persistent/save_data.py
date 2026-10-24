@@ -23,6 +23,10 @@ class TextFile():
 
 window_name = TextFile('WINDOW NAME', '(Window Name)')
 snap_on_start = TextFile('SNAP ON START', 'False')
+hp_potion_threshold = TextFile('HP POTION THRESHOLD', '0')
+mp_potion_threshold = TextFile('MP POTION THRESHOLD', '0')
+hp_potion_key = TextFile('HP POTION KEY', 'Delete')
+mp_potion_key = TextFile('MP POTION KEY', 'End')
 
 
 def main():
