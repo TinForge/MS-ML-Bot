@@ -37,8 +37,14 @@ VK_END = 0x23
 VK_HOME = 0x24
 VK_INSERT = 0x2D
 
+VK_SPACE = 0x20
+
 # Keys the user can pick by name, e.g. for potions
 KEY_NAMES = {"Insert": VK_INSERT, "Delete": VK_DELETE, "Home": VK_HOME, "End": VK_END, "Page Up": VK_PRIOR, "Page Down": VK_NEXT}
+
+# Every key a bot profile can bind by name: modifiers, Space, the potion keys, letters and digits
+BIND_NAMES = {"Ctrl": VK_CONTROL, "Alt": VK_MENU, "Shift": VK_SHIFT, "Space": VK_SPACE, **KEY_NAMES,
+              **{chr(c): c for c in range(ord("A"), ord("Z") + 1)}, **{chr(c): c for c in range(ord("0"), ord("9") + 1)}}
 
 # Share scan codes with the numpad, so they need the extended flag to be read as the real key
 EXTENDED_KEYS = {VK_INSERT, VK_DELETE, VK_HOME, VK_END, VK_PRIOR, VK_NEXT}

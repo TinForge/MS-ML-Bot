@@ -84,5 +84,5 @@ class OverlayPanel(LabelFrame):
 
 
                 if "Platforms" in self.selected_options:
-                    ground_list = [item for item in values.detected_instances if item.name == "Ground"]
+                    ground_list = [item for item in values.detected_instances if item.name == "Platform"]
                     overlay.instance.render_floor(ground_list)

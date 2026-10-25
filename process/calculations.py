@@ -4,6 +4,7 @@ import time
 import threading
 from gui import window
 from data import values, rects
+from process import navigation
 from tools import keyboard
 
 
@@ -30,65 +31,31 @@ class CalculationThread(threading.Thread):
 
     def calculate(self):
         if values.detected_instances is None:  # Return if no data to work with
-            return        
+            return
 
-        # get rect instances
         instances = values.detected_instances
-        player: rects.Rect = rects.find_rect_by_class(instances, "Player")
+        player = self.find_player(instances)
         values.debug_player = player
 
-        # get platform
-        platform_instances = rects.find_platform_instances(instances)
-        if player is not None:
-            platform: rects.Rect = rects.find_player_platform(platform_instances, player)
-            values.debug_platform = platform
-
-        # get mob
-        mob_instances = rects.find_mob_instances(instances)
-        if values.debug_platform is not None:
-            mob_instances = rects.find_mobs_on_platform(mob_instances, platform)
-        if values.debug_player is not None:
-            mob: rects.Rect = rects.find_closest_mob(mob_instances, player)
-            values.debug_mob = mob
-
-        # get path
-        if values.debug_platform is not None:
-            path: rects.Rect = rects.find_closest_path(instances, platform)
-            values.debug_path = path
-        elif values.debug_player is not None:
-            path: rects.Rect = rects.find_closest_path(instances, player)  # fallback if no platform is found
-            values.debug_path = path
-
-        # mob logic
-        if values.debug_mob is not None:
-            values.debug_x_distance = mob.center_x - player.center_x
-            values.debug_y_distance = player.center_y - mob.center_y
-            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
-            values.debug_state = "Attack"
-
-        # platform logic   
-        elif values.debug_path is not None:
-            if player.center_x < path.center_x:  # player is left of platform
-                x = path.x1 - player.x2
-                # x = path.center_x - player.x2
-                values.debug_x_distance = 0 if x < -30 else x  # player is close enough
-            else:  # player is right of platform
-                x = path.x2 - player.x1
-                # x = path.center_x - player.x1
-                values.debug_x_distance = 0 if x > 30 else x  # player is close enough
-
-            values.debug_on_ladder = values.debug_path.name == "Ladder"
-            if values.debug_on_ladder:
-                values.debug_y_distance = player.y2 - path.y2
-            else:
-                values.debug_y_distance = player.y2 - path.y1
-            values.debug_direction = keyboard.VK_LEFT if values.debug_x_distance < 0 else keyboard.VK_RIGHT
-            values.debug_state = "Navigate"
+        result = navigation.plan(player, instances, values.nav_jump_height)
+        values.debug_platform = result.platform
+        values.debug_state = result.state
+        values.debug_route = result.route
+        values.debug_x_distance = result.dx
+        values.debug_y_distance = result.dy
+        values.debug_on_ladder = result.on_ladder
+        values.debug_direction = keyboard.VK_LEFT if result.dx < 0 else keyboard.VK_RIGHT
+        if result.state == "Attack":
+            values.debug_mob = result.target
+        elif result.state == "Navigate":
+            values.debug_path = result.target
 
 
-        # searching logic
-        elif values.debug_player is None:
-            values.debug_state = "Search"
+    def find_player(self, instances):  # The player found by their nametag, or YOLO's Player box if the nametag isn't visible
+        if values.player_rect is not None:
+            x1, y1, x2, y2 = values.player_rect
+            return rects.Rect("Player", "blue", x1, y1, x2, y2, 1)
+        return rects.find_rect_by_class(instances, "Player")
 
 
     def clear_values(self):
@@ -96,6 +63,7 @@ class CalculationThread(threading.Thread):
         values.debug_platform = None
         values.debug_mob = None
         values.debug_path = None
+        values.debug_route = None
         values.debug_on_ladder = False
         values.debug_x_distance = 0
         values.debug_y_distance = 0

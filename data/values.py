@@ -31,6 +31,11 @@ looting_active = False
 randomizer_active = False
 potion_active = False
 
+# Set by bot_panel.py; bot.py reloads the profile whenever the name or version changes
+bot_profile = None
+bot_profile_version = 0
+bot_profile_error = None  # Message if the picked profile could not be loaded
+
 # Set by stats_panel.py; a threshold of 0 turns that potion off
 hp_potion_threshold = 0
 mp_potion_threshold = 0
@@ -53,6 +58,8 @@ debug_y_distance = 0
 debug_direction = None
 debug_path = None
 debug_on_ladder = False
+debug_route = None  # Navigate: up, down or walk
+nav_jump_height = 100  # Highest platform worth jumping for, from the bot profile
 
 debug_action = "nothing"
 debug_state = "nothing"

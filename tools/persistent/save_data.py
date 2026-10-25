@@ -27,6 +27,7 @@ hp_potion_threshold = TextFile('HP POTION THRESHOLD', '0')
 mp_potion_threshold = TextFile('MP POTION THRESHOLD', '0')
 hp_potion_key = TextFile('HP POTION KEY', 'Delete')
 mp_potion_key = TextFile('MP POTION KEY', 'End')
+bot_profile = TextFile('BOT PROFILE', 'spearman')
 
 
 def main():

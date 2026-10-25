@@ -27,6 +27,18 @@ Run from the repository root, as administrator (the game ignores input from non-
 
 In the app's Application panel, set the window name to the game window's title (e.g. `MapleStory`).
 
+## Bot profiles
+
+Each character build is a file in [`profiles/`](profiles), picked from the Bot panel's Profile dropdown.
+A profile sets the fighting style (`melee` or `ranged`), its attacks (key, horizontal and vertical range, jump attack, cooldown), mobility (dash, flash jump, teleport) and key bindings.
+Copy an existing profile to start a new one; re-picking a profile in the dropdown reloads it after edits, and a broken profile is reported there without replacing the one in use.
+
+Behaviours live in [`process/behaviours.py`](process/behaviours.py). To test them without the game:
+
+```
+.venv\Scripts\python.exe -m unittest discover -s tests -t .
+```
+
 ## Configuration
 
 Tunable values (read rates, player search, potion timing, display) are in [`config.toml`](config.toml), with a comment explaining each one.

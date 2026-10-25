@@ -1,0 +1,20 @@
+# Thief with claws (example: set the skill keys to your in-game bindings)
+description = "Assassin: throws from mid range and uses Flash Jump to cover distance"
+behaviour = "ranged"
+
+[keys]
+jump = "Alt"
+loot = "Z"
+
+[ranged]
+keep_distance = 80
+
+[[attacks]]
+name = "Lucky Seven"
+key = "Ctrl"
+range_x = [80, 330]
+range_y = [-40, 40]
+
+[[mobility]]
+type = "flash_jump"      # Jump, then jump again mid-air; uses the jump key
+min_distance = 250

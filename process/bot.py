@@ -2,9 +2,9 @@
 
 from gui import window
 import time
-import random
 import threading
 from data import config, values, profiles
+from process import behaviours, executor
 from tools import keyboard
 
 potion_cooldown = config.potion_cooldown  # Seconds before the same key can be pressed again, shared when HP and MP use the same key
@@ -18,10 +18,10 @@ class BotThread(threading.Thread):
         instance = self
         self.is_running = False
 
-        self.profile = profiles.WarriorLong()
-        # self.profile = profiles.WarriorShort()
-
-        self.old_direction = None
+        self.profile = None  # Loaded from profiles/ by update_profile
+        self.behaviour = None
+        self.executor = None
+        self.profile_request = None  # (name, version) last loaded or attempted
 
         self.potion_read_id = None  # Last HP/MP reading auto potion acted on
         self.potion_low_reads = {"HP": 0, "MP": 0}
@@ -32,7 +32,10 @@ class BotThread(threading.Thread):
         while window.instance is not None:
             self.clear_values()
             self.auto_potion()  # Runs even when botting is off
+            self.update_profile()
             if self.is_running is False:
+                if self.executor is not None:
+                    self.executor.stop_moving()  # Don't leave an arrow key held down
                 time.sleep(0.2)  # Adjustable
             else:
                 self.calculate()
@@ -41,89 +44,34 @@ class BotThread(threading.Thread):
 
 
     def calculate(self):
-        if values.window_active is False:
+        if values.window_active is False or self.behaviour is None:
             return
-
-        x_distance = values.debug_x_distance
-        y_distance = values.debug_y_distance
-        direction = values.debug_direction
-
-
-        if values.debug_state == "Attack":
-            if values.debug_mob is None:
-                return
-            
-            # if too far away
-            if abs(x_distance) > 350:
-                values.debug_action = "move closer"
-                self.dash(direction)
-                self.move(direction)
-                if values.randomizer_active:
-                    self.random_jump(2)
-
-            # if far away
-            elif abs(x_distance) > self.profile.max_range:
-                values.debug_action = "move closer"
-                self.move(direction)
-
-            # if within range
-            elif abs(x_distance) < self.profile.max_range:
-                self.move(None)
-
-                if y_distance > self.profile.min_height and y_distance < self.profile.max_height:
-                    values.debug_action = "attack"
-                    self.attack(direction)
-                elif y_distance > self.profile.max_height and y_distance < self.profile.max_height + 75:
-                    values.debug_action = "jump attack"
-                    self.jump_attack(direction)
-                elif y_distance < self.profile.min_height:
-                    values.debug_action = "move closer"
-                    # self.move(direction)
-                elif y_distance < -150:
-                    values.debug_action = "floor drop"
-
-            # if too close
-            elif abs(x_distance) < self.profile.min_range:
-                values.debug_action = "move away"
-                self.move(keyboard.VK_RIGHT if direction == keyboard.VK_LEFT else keyboard.VK_LEFT)
+        situation = behaviours.Situation.from_values(time.time(), self.executor.attack_last_used)
+        action = self.behaviour.decide(situation)
+        values.debug_action = action.label
+        self.executor.run(action)
+        if values.looting_active:  # spam loot
+            self.executor.loot()
 
 
-        elif values.debug_state == "Navigate":
-            if values.debug_path is None:
-                return
-            
-            # if too far away
-            if abs(x_distance) > 350:
-                values.debug_action = "move closer"
-                self.dash(direction)
-                self.move(direction)
-
-            # if far away
-            elif abs(x_distance) > self.profile.platform_range:
-                values.debug_action = "move closer"
-                self.move(direction)
-
-            # if too close
-            elif abs(x_distance) == 0 and (y_distance < self.profile.platform_height):
-                values.debug_action = "jump"
-                self.move(None)
-                self.jump(up=values.debug_on_ladder)
-
-            # if within range
-            elif abs(x_distance) < self.profile.platform_range and (y_distance < self.profile.platform_height):
-                values.debug_action = "moving jump"
-                self.move(None)
-                self.move_jump(direction, up=values.debug_on_ladder)
-
-        elif values.debug_state == "Search":
-            self.up()
-            if values.randomizer_active:
-                values.debug_action = "random move"
-                self.random_move()
-                
-        # spam loot
-        if values.looting_active:
-            self.loot()
+    def update_profile(self):  # Loads the profile picked in the Bot panel; a broken one is reported and the old one kept
+        request = (values.bot_profile, values.bot_profile_version)
+        if request == self.profile_request:
+            return
+        self.profile_request = request
+        try:
+            profile = profiles.load(values.bot_profile)
+        except profiles.ProfileError as e:
+            values.bot_profile_error = str(e)
+            print("Bot profile:", e)
+            return
+        values.bot_profile_error = None
+        if self.executor is not None:
+            self.executor.stop_moving()
+        self.profile = profile
+        values.nav_jump_height = profile.platform_height  # Used by navigation to decide which platforms are in reach
+        self.behaviour = behaviours.for_profile(profile)
+        self.executor = executor.Executor(profile)
 
 
     def clear_values(self):
@@ -157,117 +105,6 @@ class BotThread(threading.Thread):
         keyboard.PressKey(key)
         time.sleep(0.05)
         keyboard.ReleaseKey(key)
-
-
-    # -----------------------------------------------
-
-
-    def dash(self, direction):
-        keyboard.PressKey(direction)
-        time.sleep(0.05)
-        keyboard.ReleaseKey(direction)
-
-        keyboard.PressKey(keyboard.VK_SHIFT)
-        time.sleep(0.05)
-        keyboard.ReleaseKey(keyboard.VK_SHIFT)
-
-
-    def attack(self, direction):
-        keyboard.PressKey(direction)
-        time.sleep(0.05)
-        keyboard.ReleaseKey(direction)
-
-        keyboard.PressKey(keyboard.VK_CONTROL)
-        time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_CONTROL)
-
-    def move(self, direction):
-        if direction is None and self.old_direction is not None:  # stop moving
-            keyboard.ReleaseKey(self.old_direction)
-        elif direction is not self.old_direction and self.old_direction is not None:  # move
-            keyboard.ReleaseKey(self.old_direction)
-            keyboard.PressKey(direction)
-            time.sleep(0.1)
-        elif self.old_direction is not None:  # continue
-            keyboard.PressKey(self.old_direction)
-            time.sleep(0.1)
-
-        self.old_direction = direction
-
-
-    def up(self):
-        keyboard.PressKey(keyboard.VK_UP)
-        time.sleep(1)
-        keyboard.ReleaseKey(keyboard.VK_UP)
-
-
-    def jump(self, up=False):
-        keyboard.PressKey(keyboard.VK_MENU)
-        time.sleep(0.25)
-        if up:
-            keyboard.PressKey(keyboard.VK_UP)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
-        time.sleep(0.25)
-        if up:
-            time.sleep(1)
-            keyboard.ReleaseKey(keyboard.VK_UP)
-
-    def random_jump(self, chance):
-        i = random.randint(1, chance)
-        if i == chance:
-            keyboard.PressKey(keyboard.VK_MENU)
-            time.sleep(0.01)
-            keyboard.ReleaseKey(keyboard.VK_MENU)
-
-    def move_jump(self, direction, up=False):
-        keyboard.PressKey(direction)
-        time.sleep(0.15)
-        keyboard.PressKey(keyboard.VK_MENU)
-        if up:
-            keyboard.PressKey(keyboard.VK_UP)
-        time.sleep(0.25)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
-        keyboard.ReleaseKey(direction)
-        time.sleep(0.4)
-        if up:
-            time.sleep(1)
-            keyboard.ReleaseKey(keyboard.VK_UP)
-
-    def move_jump_attack(self, direction):
-        keyboard.PressKey(direction)
-        keyboard.PressKey(keyboard.VK_MENU)
-        time.sleep(0.6)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
-        keyboard.ReleaseKey(direction)
-        keyboard.PressKey(keyboard.VK_CONTROL)
-        time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_CONTROL)
-
-    def jump_attack(self, direction):
-        keyboard.PressKey(keyboard.VK_MENU)
-        time.sleep(0.4)
-        keyboard.ReleaseKey(keyboard.VK_MENU)
-
-        keyboard.PressKey(direction)
-        time.sleep(0.01)
-        keyboard.ReleaseKey(direction)
-
-        keyboard.PressKey(keyboard.VK_CONTROL)
-        time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_CONTROL)
-
-
-    def loot(self):
-        keyboard.PressKey(keyboard.VK_Z)
-        time.sleep(0.01)
-        keyboard.ReleaseKey(keyboard.VK_Z)
-
-    def random_move(self):
-        i = random.randint(1, 2)
-        direction = keyboard.VK_LEFT if i == 1 else keyboard.VK_RIGHT
-        keyboard.PressKey(direction)
-        time.sleep(0.2)
-        keyboard.ReleaseKey(direction)
 
 
 instance: BotThread = None
