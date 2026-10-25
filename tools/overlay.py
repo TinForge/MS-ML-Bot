@@ -65,6 +65,30 @@ class Overlay:
         self.shapes.add(self.canvas.create_rectangle(x1, y1, x2, y2, fill='', outline=color, width=thickness))
         self.canvas.pack()
 
+    def render_minimap(self, minimap, color='magenta', thickness=2):  # Map area outline and a ring around the player's dot
+        x1, y1, x2, y2 = minimap.map_rect
+        self.shapes.add(self.canvas.create_rectangle(x1 - 1, y1 - 1, x2, y2, fill='', outline=color, width=thickness))
+        if minimap.player is not None:
+            px, py = x1 + minimap.player[0], y1 + minimap.player[1]
+            self.shapes.add(self.canvas.create_oval(px - 8, py - 8, px + 8, py + 8, fill='', outline='cyan', width=thickness))
+        self.canvas.pack()
+
+    def render_platforms(self, mapper, frame_rect):  # Recorded platforms (lines), ladders and the player's feet, from map coords
+        for line in mapper.lines:
+            points = [mapper.to_screen(p, frame_rect) for p in line]
+            if None not in points and len(points) >= 2:
+                self.shapes.add(self.canvas.create_line(*[c for p in points for c in p], fill='orange', width=3))
+        for ladder in mapper.ladders:
+            top, bottom = mapper.to_screen((ladder["x"], ladder["top"]), frame_rect), mapper.to_screen((ladder["x"], ladder["bottom"]), frame_rect)
+            if top is not None and bottom is not None:
+                self.shapes.add(self.canvas.create_line(*top, *bottom, fill='yellow', width=3))
+        feet = mapper.feet
+        point = mapper.to_screen(feet, frame_rect) if feet is not None else None
+        if point is not None:
+            x, y = point
+            self.shapes.add(self.canvas.create_oval(x - 5, y - 5, x + 5, y + 5, fill='red', outline='white'))
+        self.canvas.pack()
+
     def render_circle(self, new_rects: list, offset=6):
         r: rects.Rect
         for r in new_rects:

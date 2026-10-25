@@ -7,7 +7,7 @@ import math
 
 from data import config, values
 from data import trackers
-from tools import stat_reader, player_finder, screen, timer
+from tools import stat_reader, player_finder, minimap, minimap_mosaic, map_recorder, screen, timer
 
 stats_interval = config.stats_interval  # Seconds between reads while detection is off and the player box is hidden
 player_interval = config.player_interval  # Same, while the player box is shown
@@ -22,6 +22,10 @@ class DetectionThread(threading.Thread):
         self.model = None  # Loaded the first time detection runs, as importing torch and YOLOv5 takes seconds
         self.last_stats_time = 0
         self.last_nametag = None  # Where the player's nametag was last found, in game area coords
+        self.last_minimap = None  # Where the minimap's title was last found, in game area coords
+        self.minimap_tracker = minimap_mosaic.Tracker()  # Stitches the scrolling minimap, saved per map in maps/
+        self.mapper = map_recorder.Mapper()  # Follows the player on the map and records platforms, saved per map in maps/
+        values.mapper = self.mapper
 
     def run(self):
         while window.instance is not None:
@@ -38,6 +42,8 @@ class DetectionThread(threading.Thread):
                 self.read_stats(self.model.last_frame, self.model.last_frame_rect)
                 self.process()
                 timer.record("Detection", frame_start)  # Total: grab, inference, HP/MP read, player find and tracking
+        self.minimap_tracker.save()  # Keep what was seen and recorded on the current map
+        self.mapper.save()
 
 
     def load_model(self):
@@ -51,7 +57,7 @@ class DetectionThread(threading.Thread):
 
     def read_stats(self, frame, frame_rect):  # Reuses the inference frame when there is one, otherwise grabs at a slower rate
         if frame is None:
-            full = values.show_player_rect  # Finding the player needs the whole game area, the stats only its bottom
+            full = values.show_player_rect or values.record_platforms or values.show_platforms  # Only search for the player when it's needed
             if time.time() - self.last_stats_time < (player_interval if full else stats_interval):  # Faster while the player box needs to follow smoothly
                 return
             frame_rect = values.window_rect
@@ -60,15 +66,38 @@ class DetectionThread(threading.Thread):
         self.last_stats_time = time.time()
         start = time.perf_counter()
         if frame is None and frame_rect is not None:
-            frame = screen.grab(frame_rect) if full else stat_reader.grab(frame_rect)
+            frame = screen.grab(frame_rect)  # Whole game area: the stats are at the bottom, the minimap at the top
         if frame is None:
-            values.player_hp = values.player_mp = values.player_name = None
+            values.player_hp = values.player_mp = values.player_name = values.minimap = None
         else:
             values.player_hp, values.player_mp = stat_reader.read_frame(frame)
             values.player_name = player_finder.read_name(frame)
         timer.record("Stats", start)  # Includes its own screen grab while detection is off
         values.stats_read_id += 1  # Lets readers tell a fresh reading from one they've already seen
+        self.read_minimap(frame, frame_rect)
         self.find_player(frame if full else None, frame_rect)
+        self.update_mapper(frame, frame_rect)
+
+
+    def update_mapper(self, frame, frame_rect):  # Follows the player for recording or drawing platforms
+        if frame is None or not (values.record_platforms or values.show_platforms):
+            return
+        start = time.perf_counter()
+        self.mapper.update(frame, frame_rect, values.player_rect, values.minimap, time.time(), values.record_platforms)
+        timer.record("Mapping", start)
+
+
+    def read_minimap(self, frame, frame_rect):  # Stores the minimap with its map area in screen coords
+        if frame is None:
+            return
+        start = time.perf_counter()
+        result, self.last_minimap = minimap.read(frame, self.last_minimap)
+        if result is not None:
+            x1, y1, x2, y2 = result.map_rect
+            result.map_rect = (x1 + frame_rect[0], y1 + frame_rect[1], x2 + frame_rect[0], y2 + frame_rect[1])
+            self.minimap_tracker.update(result)
+        values.minimap = result
+        timer.record("Minimap", start)
 
 
     def find_player(self, frame, frame_rect):  # Stores the player's rect in screen coords

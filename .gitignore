@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Stitched minimaps and other per-map data, generated while playing
+maps/

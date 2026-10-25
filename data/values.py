@@ -18,6 +18,11 @@ stats_read_id = 0  # Increments with every HP/MP reading
 player_name = None  # Name pixels (bool array) from the status bar
 player_rect = None  # Player character in screen pixels (x1, y1, x2, y2), found by their nametag
 show_player_rect = False
+minimap = None  # tools.minimap.Minimap with its map area in screen pixels, or None if not shown
+show_minimap = False
+record_platforms = False
+show_platforms = False
+mapper = None  # tools.map_recorder.Mapper, set by detection.py
 
 # Set through tools/timer.py, name: (smoothed ms, time.time() of last sample)
 timings = {}

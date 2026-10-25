@@ -6,7 +6,7 @@ from tkinter.ttk import *
 from tools import timer
 
 # (timer name, display name); stages of a detection frame, then its total
-STAGES = [("Grab", "Screen Grab"), ("Inference", "Inference"), ("Stats", "HP/MP Read"), ("Player", "Player Find")]
+STAGES = [("Grab", "Screen Grab"), ("Inference", "Inference"), ("Stats", "HP/MP Read"), ("Player", "Player Find"), ("Minimap", "Minimap"), ("Mapping", "Mapping")]
 TOTAL = ("Detection", "Total per Frame")
 
 
