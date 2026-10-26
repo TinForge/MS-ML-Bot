@@ -133,3 +133,6 @@ maps/
 
 # YOLO dataset: sprites and generated images are game assets, never committed
 dataset/
+
+# Downloaded by Ultralytics for its mixed-precision check at the start of training (e.g. yolo26n.pt)
+weights/

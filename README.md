@@ -12,10 +12,8 @@ py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pip install -e . --no-deps
 ```
 
-The last command registers the project's packages (`gui`, `data`, `process`, `tools`, `yolov5`) so scripts can be run directly from an IDE.
+The last command registers the project's packages (`gui`, `data`, `process`, `tools`, `yolo11`) so scripts can be run directly from an IDE.
 Re-run it if the repository folder moves. For linting/formatting tools, install `requirements-dev.txt` instead of `requirements.txt`.
-
-The YOLOv5 code is fetched by `torch.hub` on first run, pinned to a specific commit in `yolov5/model.py`, and cached in `%USERPROFILE%\.cache\torch\hub`.
 
 ## Running
 

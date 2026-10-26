@@ -3,7 +3,7 @@
 from tkinter import *
 from tkinter.ttk import *
 
-from gui import references
+from gui import profile_editor, references
 from data import values, profiles
 from process import bot
 from tools.persistent import save_data
@@ -17,8 +17,12 @@ class BotPanel(LabelFrame):
         names = profiles.available()
         saved = save_data.bot_profile.read()
         self.profile_name = StringVar(value=saved if saved in names else (names[0] if names else ""))
-        self.profile_picker = Combobox(self, textvariable=self.profile_name, values=names, state="readonly", width=12)
-        self.profile_picker.grid(sticky=E, row=0, column=2, padx=0, pady=5)
+        picker = Frame(self)  # The dropdown, with the button that opens its profile in the editor
+        picker.grid(sticky=E, row=0, column=2, padx=0, pady=5)
+        self.profile_picker = Combobox(picker, textvariable=self.profile_name, values=names, state="readonly", width=12)
+        self.profile_picker.pack(side=RIGHT)
+        Button(picker, text="Edit", width=5, command=lambda: self.edit_profile()).pack(side=RIGHT, padx=(0, 4))
+        self.editor = None  # The open profile editor, so Edit brings it forward instead of opening another
         self.profile_picker.bind("<<ComboboxSelected>>", lambda event: self.on_profile_selected())  # Also fires when re-picking the same one, which reloads it
         self.on_profile_selected()
         #
@@ -53,6 +57,17 @@ class BotPanel(LabelFrame):
         values.bot_profile = self.profile_name.get()
         values.bot_profile_version += 1
         save_data.bot_profile.save(values.bot_profile)
+
+    def edit_profile(self):
+        name = self.profile_name.get()
+        if not name:
+            return
+        if self.editor is not None and self.editor.window.winfo_exists() and self.editor.name == name:
+            self.editor.window.lift()
+            return
+        if self.editor is not None and self.editor.window.winfo_exists():
+            self.editor.window.destroy()  # Another profile was open: show the one picked now
+        self.editor = profile_editor.ProfileEditor(self.winfo_toplevel(), name)
 
     def toggle_looting(self):
         values.looting_active = not values.looting_active

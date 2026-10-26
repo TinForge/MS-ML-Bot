@@ -7,14 +7,14 @@ from data import rects
 feet_margin = 30  # How far feet may be from a platform's top while still standing on it
 edge_overlap = 30  # How far the player may overlap a platform above before jumping straight up for it
 drop_margin = 15  # How far inside a lower platform's edges the player must be before dropping onto it
-ladder_align = 12  # How far the player's centre may be from a rope's before jumping straight up onto it
-on_ladder_x = 12  # How far the player's centre may be from a rope's while hanging on it
+ladder_align = 20  # How far the player's centre may be from a rope's before jumping straight up onto it (ropes catch well off-centre)
+on_ladder_x = 20  # How far the player's centre may be from a rope's while hanging on it (the tracker takes a moment to say so)
 height_weight = 3  # When picking a target, height difference counts this many times more than horizontal distance (prefer the same level)
 clump_bonus = 40  # When picking a target, each other mob in the same direction and within clump range counts as this much closer
 hurt_bonus = 150  # When picking a target, a mob with its health bar showing (already hit) counts as this much closer: finish it first
 stick_bonus = 40  # When picking a target, the one picked last counts as this much closer, so two similar mobs don't swap every frame
 stick_distance = 40  # How far the last target may have moved (knockback, box jitter) and still be the one picked last
-size_weight = 0  # When picking a target, each pixel of width beyond typical_width counts as this much closer (negative: prefer smaller)
+size_weight = 0.5  # When picking a target, each pixel of width beyond typical_width counts as this much closer (negative: prefer smaller)
 typical_width = 50  # Mob box width that size_weight counts from
 
 
@@ -22,7 +22,8 @@ typical_width = 50  # Mob box width that size_weight counts from
 class Plan:
     state: str = None  # Attack, Navigate, Search, or None when there's nothing to do
     target: object = None  # Mob to attack, or platform/ladder to move to
-    route: str = None  # Navigate: up (jump onto target), down (drop onto target), walk (towards a mob) or climb (up the rope it's on)
+    route: str = None  # Navigate: up (jump onto target), down (drop onto target), walk (towards a mob), climb (up the rope it's on) or
+    # jump_off (off the rope, sideways: dx gives the side)
     dx: float = 0  # Horizontal distance to the target: negative is left. Attack: to the mob's nearer edge
     dy: float = 0  # How far the target is above the player
     on_ladder: bool = False  # Navigate target is a ladder
@@ -31,18 +32,19 @@ class Plan:
     goal: object = None  # Mob the route leads towards
 
 
-def plan(player, instances, jump_height, clump_range=150, previous=None, explore=None, standing=None):  # player: a Rect, None when
-    # the player can't be found. clump_range: how far in front the widest-hitting attack reaches, for preferring bunched-up mobs;
-    # previous: the last plan's target; explore: "up" or "down" to look for mobs on other platforms when none are in sight;
-    # standing: True when the movement tracker says the player is on the ground (not on a rope), None if unknown
+def plan(player, instances, jump_height, clump_range=150, previous=None, explore=None, standing=None, on_rope=False, skip=()):  # player: a
+    # Rect, None when the player can't be found. clump_range: how far in front the widest-hitting attack reaches, for preferring
+    # bunched-up mobs; previous: the last plan's target; explore: "up" or "down" to look for mobs on other platforms when none are in
+    # sight; standing / on_rope: what the movement tracker says the player is doing (on the ground / hanging on a rope); skip: platforms
+    # not to jump for, as jumps at them kept failing
     if player is None:
         return Plan("Search")
     platforms = rects.find_platform_instances(instances)
     mobs = rects.find_mob_instances(instances)
     platform = rects.find_player_platform(platforms, player)
-    ladder = hanging_on(instances, player, platform, standing)
-    if ladder is not None:  # Keep climbing until off onto the platform above: nothing else can be done from a rope
-        return Plan("Navigate", ladder, route="climb", dy=player.y2 - ladder.y1, on_ladder=True, platform=platform)
+    ladder = hanging_on(instances, player, platform, standing, on_rope)
+    if ladder is not None:  # Nothing else can be done from a rope: climb on up, or jump off toward a mob lower down
+        return rope_plan(player, ladder, platform, pick_target(rects.find_mob_instances(instances), player, 0))
 
     # Attack mobs on the player's platform (or any mob, if no platform is detected under the player)
     local_mobs = rects.find_mobs_on_platform(mobs, platform) if platform is not None else mobs
@@ -54,23 +56,23 @@ def plan(player, instances, jump_height, clump_range=150, previous=None, explore
 
     goal = pick_target(mobs, player, 0)  # Nearest mob elsewhere, which the route heads for
     if goal is None:
-        return explore_plan(instances, platforms, player, platform, jump_height, explore)
+        return explore_plan(instances, platforms, player, platform, jump_height, explore, skip)
     if goal.y2 > player.y2 + feet_margin:  # Lower down: drop
         below = find_platform_below(platforms, player, goal)
         if below is not None:
             return drop_plan(player, below, platform, goal)
     elif standing_above(platforms, player, goal):  # On a platform higher up: jump or climb, but only then. Not just a higher box
         # bottom: flying mobs and sprites drawn above their feet would send the bot up the nearest rope
-        path = rects.find_closest_path(instances, player, jump_height, goal, exclude=platform)
+        path = rects.find_closest_path(instances, player, jump_height, goal, exclude=platform, skip=skip)
         if path is not None:
             return up_plan(player, path, platform, goal)
     return Plan("Navigate", goal, route="walk", dx=goal.center_x - player.center_x, platform=platform, goal=goal)
 
 
-def explore_plan(instances, platforms, player, platform, jump_height, direction):  # No mobs in sight. Exploring, head for the
+def explore_plan(instances, platforms, player, platform, jump_height, direction, skip=()):  # No mobs in sight. Exploring, head for the
     # nearest way up (rope or jump) or down; otherwise, or with no way that direction, stay put
     if direction == "up":
-        path = rects.find_closest_path(instances, player, jump_height, None, exclude=platform)
+        path = rects.find_closest_path(instances, player, jump_height, None, exclude=platform, skip=skip)
         if path is not None:
             return up_plan(player, path, platform, None)
     elif direction == "down":
@@ -80,13 +82,25 @@ def explore_plan(instances, platforms, player, platform, jump_height, direction)
     return Plan(platform=platform)
 
 
-def hanging_on(instances, player, platform, standing):  # The recorded rope the player is hanging on, or None
-    if platform is not None or standing:  # On a platform: at most at a rope's foot or top
+def hanging_on(instances, player, platform, standing, on_rope=False):  # The rope the player is hanging on, or None. The movement
+    # tracker knows it for sure (on_rope), even on a rope that was never recorded; otherwise a recorded rope where the player is
+    if platform is not None or standing:  # On a platform: at most at a rope's foot or top (and Up there could take a portal)
         return None
-    for ladder in (r for r in instances if r.name == "Ladder"):
-        if abs(ladder.center_x - player.center_x) <= on_ladder_x and ladder.y1 - feet_margin <= player.y2 <= ladder.y2 + feet_margin:
-            return ladder
+    near = [r for r in instances if r.name == "Ladder" and abs(r.center_x - player.center_x) <= on_ladder_x
+            and r.y1 - feet_margin <= player.y2 <= r.y2 + feet_margin]
+    if near:
+        return near[0]
+    if on_rope:  # Not recorded: a stand-in where the player is
+        return rects.Rect("Ladder", "yellow", player.center_x - on_ladder_x, player.y2, player.center_x + on_ladder_x, player.y2, 1)
     return None
+
+
+def rope_plan(player, ladder, platform, goal):  # On a rope: climb up, unless the mob being headed for is lower down: then jump off
+    # toward it, which is quicker than climbing down
+    if goal is not None and goal.y2 > player.y2 + feet_margin:
+        side = 1 if goal.center_x >= player.center_x else -1
+        return Plan("Navigate", ladder, route="jump_off", dx=side, on_ladder=True, platform=platform, goal=goal)
+    return Plan("Navigate", ladder, route="climb", dy=player.y2 - ladder.y1, on_ladder=True, platform=platform, goal=goal)
 
 
 def standing_above(platforms, player, mob):  # Whether the mob stands on a known platform higher than the player's feet

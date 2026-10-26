@@ -9,25 +9,24 @@ dxcam==0.3.0
 Pillow==12.3.0
 pywin32==312
 sv-ttk==2.6.1
+tomlkit==0.15.2  # Saves profiles from the profile editor without losing their comments
 
 # ML inference
 torch==2.14.1+cu130
 torchvision==0.29.1+cu130
 
-# Required by the YOLOv5 code loaded through torch.hub (yolov5/model.py)
+# YOLO11 detection (Ultralytics) and image processing
+ultralytics==8.4.184
+ultralytics-thop==2.2.3
 matplotlib==3.11.2
 numpy==2.5.2
 opencv-python==5.0.0.93
 packaging==26.3
-pandas==3.1.0
 psutil==7.2.2
 PyYAML==6.0.3
 requests==2.34.2
-scipy==1.18.1
-seaborn==0.13.2
+scipy==1.18.1  # Optional for Ultralytics, but makes validation while training faster
 setuptools==78.1.0
-ultralytics==8.4.184
-ultralytics-thop==2.2.3
 
 # TensorRT, for the faster yolo11/weights.engine. 10.x rather than 11: 11 needs NVIDIA ModelOpt to build FP16 engines
 tensorrt-cu13==10.16.1.11

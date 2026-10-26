@@ -18,6 +18,7 @@ folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 bin_size = 4  # Ground is recorded in columns this many pixels wide
 merge_height = 6  # Ground points within this height in a column are the same platform
 min_line_samples = 3  # Samples a platform line needs, so a stray reading never becomes a platform but one walk along it does
+min_line_width = 24  # Narrowest platform kept: real ones are far wider, slivers this thin were recorded while hanging on a rope
 max_gap = 3  # Empty columns a platform line may jump over (unrecorded bits, not real gaps)
 ladder_merge = 8  # Ladder points within this x distance are the same ladder
 min_ladder_count = 5
@@ -180,13 +181,17 @@ class PlatformMap:  # Ground and ladders recorded on one map
                 step = min(nexts, key=lambda p: (p[0] - b, abs(p[1] - y)))
                 chain.append(step)
                 used.add(step)
-            if sum(counts[p] for p in chain) < min_line_samples:
+            if sum(counts[p] for p in chain) < min_line_samples or (chain[-1][0] - chain[0][0] + 1) * bin_size < min_line_width:
                 continue
             xy = np.array([((b + 0.5) * bin_size, y) for b, y in chain], dtype=np.float32)
             if len(xy) == 1:
                 xy = np.array([[xy[0][0] - bin_size / 2, xy[0][1]], [xy[0][0] + bin_size / 2, xy[0][1]]], dtype=np.float32)
             lines.append([tuple(p) for p in cv2.approxPolyDP(xy.reshape(-1, 1, 2), 1.5, False).reshape(-1, 2)])
         return lines
+
+    def on_ladder(self, x, y):  # Whether map (x, y) is part-way up a recorded rope (not at its top or bottom)
+        return any(abs(ladder["x"] - x) <= ladder_merge and ladder["top"] + merge_height < y < ladder["bottom"] - merge_height
+                   for ladder in self.confirmed_ladders())
 
     def confirmed_ladders(self):
         return [ladder for ladder in self.ladders if ladder["count"] >= min_ladder_count and ladder["bottom"] - ladder["top"] >= 10]
@@ -266,8 +271,8 @@ class Mapper:  # Follows the player through the camera and minimap, and records 
         if not self.calibration.anchored:
             return
         self.feet = self.calibration.to_map(position)
-        if record and state == movement.GROUND and self.movement.steady >= 3:
-            self.platforms.add_ground(*self.feet)
+        if record and state == movement.GROUND and self.movement.steady >= 3 and not self.platforms.on_ladder(*self.feet):
+            self.platforms.add_ground(*self.feet)  # Never part-way up a rope: that's not ground, however still the player is
         elif record and state == movement.LADDER and self.movement.steady >= 2:
             self.platforms.add_ladder(*self.feet)
         self.learn(mobs, frame_rect, now)

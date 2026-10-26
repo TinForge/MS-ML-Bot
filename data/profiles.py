@@ -173,13 +173,15 @@ def from_dict(name, data):
         where = "attack '%s'" % a.get("name", i + 1)
         if "key" not in a or "range_x" not in a or "range_y" not in a:
             raise ProfileError("%s: %s needs key, range_x and range_y" % (name, where))
-        attacks.append(Attack(name=a.get("name", "Attack %d" % (i + 1)), key=key_name(a["key"], where),
+        attack = Attack(name=a.get("name", "Attack %d" % (i + 1)), key=key_name(a["key"], where),
                               range_x=pair(a["range_x"], where + " range_x"), range_y=pair(a["range_y"], where + " range_y"),
                               jump_attack=bool(a.get("jump_attack", False)), jump_reach=a.get("jump_reach", 75), cooldown=a.get("cooldown", 0),
                               opener=bool(a.get("opener", False)), min_mobs=a.get("min_mobs", 1), min_health=health(a.get("min_health", 0), where),
-                              hit_range=a.get("hit_range"), hit_time=seconds(a.get("hit_time", 0.35), where + " hit_time")))
+                              hit_range=a.get("hit_range"), hit_time=seconds(a.get("hit_time", 0.35), where + " hit_time"))
+        if a.get("enabled", True):  # Switched off (e.g. a power attack on a map of weak mobs): checked like the rest, then left out
+            attacks.append(attack)
     if not attacks:
-        raise ProfileError("%s: needs at least one [[attacks]] entry" % name)
+        raise ProfileError("%s: needs at least one enabled [[attacks]] entry" % name)
     if all(a.opener or a.min_mobs > 1 or a.min_health > 0 for a in attacks):
         raise ProfileError("%s: needs an attack without opener, min_mobs or min_health, for when none of them applies" % name)
 

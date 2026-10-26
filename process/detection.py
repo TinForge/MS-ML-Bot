@@ -17,7 +17,7 @@ class DetectionThread(threading.Thread):
         global instance
         instance = self
         self.is_running = False
-        self.model = None  # Loaded the first time detection runs, as importing torch and YOLOv5 takes seconds
+        self.model = None  # Loaded the first time detection runs, as importing torch and Ultralytics takes seconds
         self.last_stats_time = 0
         self.last_nametag = None  # Where the player's nametag was last found, in game area coords
         self.last_minimap = None  # Where the minimap's title was last found, in game area coords
@@ -46,8 +46,7 @@ class DetectionThread(threading.Thread):
 
     def load_model(self):
         try:
-            import importlib
-            model = importlib.import_module(config.detection_model + ".model")  # Imported here so the app starts without torch
+            from yolo11 import model  # Imported here so the app starts without torch
             self.model = model.Model()
         except Exception as e:
             print("Failed to load the detection model:", e)

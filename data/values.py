@@ -68,6 +68,7 @@ debug_path = None
 debug_on_ladder = False
 debug_route = None  # Navigate: up, down or walk
 nav_jump_height = 100  # Highest platform worth jumping for, from the bot profile
+player_speed = None  # Sideways speed in px/s from the movement tracker (negative: left), None if unknown
 nav_clump_range = 0  # How far in front the profile's mobbing attack hits, 0 without one
 
 debug_action = "nothing"

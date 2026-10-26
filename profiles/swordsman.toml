@@ -9,7 +9,7 @@ loot = "Z"
 
 # Attacks are tried top to bottom; the first one that's ready, reaches the mob and fits the situation is used.
 [[attacks]]
-name = "Mobbing attack"
+name = "Slash Blast"
 key = "Shift"
 hit_time = 0.2         # Seconds from the key press until the hit shows on the mob
 range_x = [0, 75]
@@ -18,7 +18,7 @@ min_mobs = 2             # Only when at least this many mobs are in reach on the
 hit_range = 100          # How far in front of the character it hits mobs (range_x is when to use it)
 
 [[attacks]]
-name = "Power attack"
+name = "Power Strike"
 key = "Space"
 hit_time = 0.2          # Seconds from the key press until the hit shows on the mob
 range_x = [0, 75]

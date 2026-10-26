@@ -43,13 +43,6 @@ class PlatformLine(Rect):  # Recorded ground as a polyline [(x, y), ...] sorted 
         return self.top_at(x)
 
 
-def find_rect_by_class(rects, class_name):
-    for rect in rects:
-        if rect.name == class_name:
-            return rect
-    return None
-
-
 def compare_distance(rect1, rect2):
     distance = math.sqrt((rect2.center_x - rect1.center_x)**2 + (rect2.center_y - rect1.center_y)**2)
     return distance
@@ -100,14 +93,20 @@ def find_closest_mob(rects, player):
     return closest_rect
 
 
-def find_closest_path(rects, player, jump_height=100, goal=None, exclude=None):  # Nearest platform or ladder above within jump reach
+def rope_leads_up(rope, player, margin=30):  # Its top is above the player's feet. Its bottom may be at or below them: a rope that
+    # reaches the ground is grabbed without jumping (it used to be skipped, as its bottom was below the player's centre)
+    return rope.y1 < player.y2 - margin
+
+
+def find_closest_path(rects, player, jump_height=100, goal=None, exclude=None, skip=()):  # Nearest platform or ladder above within jump
+    # reach; skip: platforms not to try (jumps at them kept failing)
     closest_distance = float('inf')
     closest_rect = None
 
     for rect in rects:
         if rect.name == "Platform" or rect.name == "Ladder":
-            if rect is not player and rect is not exclude:
-                if player.center_y - rect.bottom_at(player.center_x) > 0:  # if rect is not below
+            if rect is not player and rect is not exclude and not any(rect is s for s in skip):
+                if rope_leads_up(rect, player) if rect.name == "Ladder" else player.center_y - rect.bottom_at(player.center_x) > 0:  # not below
                     if (rect.name == "Platform" and player.y2 - rect.top_at(player.center_x) < jump_height) or (rect.name == "Ladder" and player.y2 - rect.y2 < jump_height):  # if rect is reachable
                         distance = abs(player.center_x - rect.center_x)
                         if goal is not None:  # Prefer paths that lead towards the goal

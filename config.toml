@@ -5,7 +5,6 @@
 # While Model Detection is off, the bot still reads HP/MP, the name and the player from its own screenshots.
 stats_interval = 0.25   # Seconds between reads while the player box is hidden (HP/MP don't need to be smooth)
 player_interval = 0.05  # Seconds between reads while the player box is shown (keeps the box following smoothly)
-model = "yolo11"        # Model Detection uses: "yolo11" (Mob and Loot) or "yolov5" (the old model: mob species, platforms, ladders, player)
 model_imgsz = 960       # Input size for yolo11; it was trained at 960. Lower is faster but misses small mobs and drops. The TensorRT engine is fixed at 960
 
 [player]
@@ -34,4 +33,4 @@ press_gap = [0.05, 0.12]   # Seconds at least between one tap's release and the 
 hold_jitter = 0.1          # Longer holds (jumps, climbing, walking steps) vary by up to this share either way
 
 [movement]
-explore_delay = 1.0  # Seconds without any mobs in sight before heading to another platform: up a rope or jump, else down
+explore_delay = 1.0  # With Random Behaviour on: seconds without any mobs in sight before heading to another platform (up, else down)

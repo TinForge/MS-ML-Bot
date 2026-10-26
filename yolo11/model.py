@@ -13,7 +13,7 @@ engine = "yolo11/weights.engine"  # TensorRT build of the same model (best.engin
 COLORS = {"Mob": "red", "Loot": "cyan"}
 
 
-class Model:  # Same interface as yolov5.model.Model, so detection.py can use either
+class Model:  # run() returns this frame's detections as Rects in screen coords; last_frame is the image they came from
     def __init__(self):
         self.model = load()
         self.last_frame = None  # Last grabbed game area, None if the grab wasn't cropped to it

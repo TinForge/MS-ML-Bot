@@ -11,6 +11,8 @@ DIRECTIONS = {"left": keyboard.VK_LEFT, "right": keyboard.VK_RIGHT}
 loot_interval = 0.1  # Seconds between loot presses: pressed every bot tick, it reached ~75 a second and froze the game client
 idle_sleep = 0.02  # Pause after an action that sends no keys (stop, wait), so the bot loop doesn't spin
 walk_step = 0.05  # Seconds an arrow key is held per walking tick before the bot looks again; longer overshoots the mob
+nudge_time = 0.04  # Seconds an arrow is tapped to shuffle a few pixels into place
+nudge_settle = 0.08  # Seconds to wait after a nudge, so the next look sees where it ended up
 
 
 class Executor:
@@ -18,6 +20,7 @@ class Executor:
         self.profile = profile
         self.held_direction = None  # Arrow key currently held for walking
         self.holding_up = False  # Up held for climbing a rope (or catching one while jumping)
+        self.holding_jump = False  # Jump held while walking: the character hops along (Random Behaviour)
         self.facing = None  # Arrow key of the way the character last faced, None if unknown
         self.attack_last_used = {}  # Attack name: time.time() it was last used
         self.last_loot = 0  # time.time() the loot key was last pressed
@@ -31,6 +34,8 @@ class Executor:
         kind = action.kind
         if kind != "climb" and not action.up:
             self.hold_up(False)
+        if not (kind == "move" and action.jump):
+            self.hold_jump(False)
         if kind == "climb":
             self.move(None)
             self.hold_up(True)
@@ -41,15 +46,20 @@ class Executor:
         elif kind == "jump_attack":
             self.move(None)
             self.jump_attack(direction, action.attack)
+        elif kind == "nudge":
+            self.move(None)
+            self.press(direction, nudge_time)
+            self.facing = direction
+            time.sleep(nudge_settle)
+        elif kind == "jump_off":
+            self.move(None)
+            self.jump_off(direction)
         elif kind == "move":
             self.move(direction)
-            if action.random_jump:
-                self.random_jump(2)
+            self.hold_jump(action.jump)
         elif kind == "mobility":
             self.use_mobility(direction, action.mobility)
             self.move(direction)
-            if action.random_jump:
-                self.random_jump(2)
         elif kind == "stop":
             self.move(None)
             time.sleep(idle_sleep)
@@ -65,9 +75,17 @@ class Executor:
         else:  # wait: nothing to do
             time.sleep(idle_sleep)
 
-    def stop_moving(self):  # Releases a held arrow key (and Up), e.g. when botting is turned off
+    def stop_moving(self):  # Releases a held arrow key (and Up and jump), e.g. when botting is turned off
         self.move(None)
         self.hold_up(False)
+        self.hold_jump(False)
+
+    def hold_jump(self, held):  # Holds or lets go of jump; held, the character jumps again each time it lands
+        if held:
+            keyboard.PressKey(self.key("jump"))
+        elif self.holding_jump:
+            keyboard.ReleaseKey(self.key("jump"))
+        self.holding_jump = held
 
     def hold_up(self, held):  # Holds or lets go of Up; held, it's pressed again each time like a held key repeating
         if held:
@@ -156,16 +174,20 @@ class Executor:
         keyboard.ReleaseKey(self.key("jump"))
         self.pause(0.25)
 
+    def jump_off(self, direction):  # Off a rope: a direction and jump together leave it sideways
+        keyboard.PressKey(direction)
+        self.pause(0.05)
+        self.press(self.key("jump"), 0.1)
+        self.pause(0.2)
+        keyboard.ReleaseKey(direction)
+        self.facing = direction
+
     def drop(self):  # Down + jump falls through the platform
         keyboard.PressKey(keyboard.VK_DOWN)
         self.pause(0.1)
         self.tap(self.key("jump"), 0.1)
         self.pause(0.2)
         keyboard.ReleaseKey(keyboard.VK_DOWN)
-
-    def random_jump(self, chance):
-        if random.randint(1, chance) == chance:
-            self.press(self.key("jump"))
 
     def move_jump(self, direction, up=False):
         self.facing = direction
