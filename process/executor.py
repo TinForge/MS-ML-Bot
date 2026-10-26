@@ -3,17 +3,25 @@
 import random
 import time
 
+from data import config, values
 from data.profiles import Profile
 from tools import keyboard
 
 DIRECTIONS = {"left": keyboard.VK_LEFT, "right": keyboard.VK_RIGHT}
+loot_interval = 0.1  # Seconds between loot presses: pressed every bot tick, it reached ~75 a second and froze the game client
+idle_sleep = 0.02  # Pause after an action that sends no keys (stop, wait), so the bot loop doesn't spin
+walk_step = 0.05  # Seconds an arrow key is held per walking tick before the bot looks again; longer overshoots the mob
 
 
 class Executor:
     def __init__(self, profile: Profile):
         self.profile = profile
         self.held_direction = None  # Arrow key currently held for walking
+        self.holding_up = False  # Up held for climbing a rope (or catching one while jumping)
+        self.facing = None  # Arrow key of the way the character last faced, None if unknown
         self.attack_last_used = {}  # Attack name: time.time() it was last used
+        self.last_loot = 0  # time.time() the loot key was last pressed
+        self.next_press = 0  # time.time() before which the next tap waits, like a person's fingers between taps
 
     def key(self, name):  # A key bound in the profile, e.g. "jump"
         return keyboard.BIND_NAMES[self.profile.keys[name]]
@@ -21,7 +29,13 @@ class Executor:
     def run(self, action):
         direction = DIRECTIONS.get(action.direction)
         kind = action.kind
-        if kind == "attack":
+        if kind != "climb" and not action.up:
+            self.hold_up(False)
+        if kind == "climb":
+            self.move(None)
+            self.hold_up(True)
+            self.pause(walk_step)
+        elif kind == "attack":
             self.move(None)
             self.attack(direction, action.attack)
         elif kind == "jump_attack":
@@ -38,6 +52,7 @@ class Executor:
                 self.random_jump(2)
         elif kind == "stop":
             self.move(None)
+            time.sleep(idle_sleep)
         elif kind == "jump":
             self.move(None)
             self.jump(up=action.up)
@@ -47,37 +62,67 @@ class Executor:
         elif kind == "drop":
             self.move(None)
             self.drop()
-        elif kind == "search":
-            self.up()
-            if action.random_move:
-                self.random_move()
-        # wait: nothing to do
+        else:  # wait: nothing to do
+            time.sleep(idle_sleep)
 
-    def stop_moving(self):  # Releases a held arrow key, e.g. when botting is turned off
+    def stop_moving(self):  # Releases a held arrow key (and Up), e.g. when botting is turned off
         self.move(None)
+        self.hold_up(False)
+
+    def hold_up(self, held):  # Holds or lets go of Up; held, it's pressed again each time like a held key repeating
+        if held:
+            keyboard.PressKey(keyboard.VK_UP)
+        elif self.holding_up:
+            keyboard.ReleaseKey(keyboard.VK_UP)
+        self.holding_up = held
 
     # -----------------------------------------------
 
-    def tap(self, vk, hold):
+    def press(self, vk, exact=0.01):  # One tap; returns when the key went down. With Human Key Presses on, held about as long as a
+        # person holds a key and not sooner after the last than a person could; otherwise held exactly `exact` seconds, right away
+        if not values.human_input:
+            down = time.time()
+            keyboard.PressKey(vk)
+            time.sleep(exact)
+            keyboard.ReleaseKey(vk)
+            return down
+        wait = self.next_press - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        down = time.time()
         keyboard.PressKey(vk)
-        time.sleep(hold)
+        time.sleep(random.uniform(*config.press_time))
+        keyboard.ReleaseKey(vk)
+        self.next_press = time.time() + random.uniform(*config.press_gap)
+        return down
+
+    def pause(self, seconds):  # A deliberate hold or wait; varied a little like a person's with Human Key Presses on
+        time.sleep(seconds * random.uniform(1 - config.hold_jitter, 1 + config.hold_jitter) if values.human_input else seconds)
+
+    def tap(self, vk, hold):  # A key held for a set time (a jump, a climb), varied a little
+        keyboard.PressKey(vk)
+        self.pause(hold)
         keyboard.ReleaseKey(vk)
 
+    def face(self, direction):  # Turns towards the mob only when needed: every tap of an arrow key also walks a step. None: as it is
+        if direction is not None and direction != self.facing:
+            self.press(direction, 0.05)
+            self.facing = direction
+
     def attack(self, direction, attack):
-        self.tap(direction, 0.05)  # Face the mob
-        self.tap(keyboard.BIND_NAMES[attack.key], 0.01)
-        self.attack_last_used[attack.name] = time.time()
+        self.face(direction)
+        self.attack_last_used[attack.name] = self.press(keyboard.BIND_NAMES[attack.key])  # From the key going down, for hit_time
 
     def jump_attack(self, direction, attack):
         self.tap(self.key("jump"), 0.4)
-        self.tap(direction, 0.01)
-        self.tap(keyboard.BIND_NAMES[attack.key], 0.01)
-        self.attack_last_used[attack.name] = time.time()
+        self.face(direction)
+        self.attack_last_used[attack.name] = self.press(keyboard.BIND_NAMES[attack.key])
 
     def use_mobility(self, direction, mobility):
+        self.facing = direction
         if mobility.type == "dash":
-            self.tap(direction, 0.05)
-            self.tap(keyboard.BIND_NAMES[mobility.key], 0.05)
+            self.press(direction, 0.05)
+            self.press(keyboard.BIND_NAMES[mobility.key], 0.05)
         elif mobility.type == "teleport":
             keyboard.PressKey(direction)
             self.tap(keyboard.BIND_NAMES[mobility.key], 0.2)
@@ -85,8 +130,8 @@ class Executor:
         elif mobility.type == "flash_jump":  # Jump, then jump again mid-air while holding the direction
             keyboard.PressKey(direction)
             self.tap(self.key("jump"), 0.1)
-            time.sleep(0.1)
-            self.tap(self.key("jump"), 0.05)
+            self.pause(0.1)
+            self.press(self.key("jump"), 0.05)
             keyboard.ReleaseKey(direction)
 
     def move(self, direction):
@@ -95,53 +140,47 @@ class Executor:
         elif direction != self.held_direction and self.held_direction is not None:  # change direction
             keyboard.ReleaseKey(self.held_direction)
             keyboard.PressKey(direction)
-            time.sleep(0.1)
+            self.pause(walk_step)
         elif self.held_direction is not None:  # continue
             keyboard.PressKey(self.held_direction)
-            time.sleep(0.1)
+            self.pause(walk_step)
         self.held_direction = direction
+        if direction is not None:
+            self.facing = direction
 
-    def up(self):
-        self.tap(keyboard.VK_UP, 1)
-
-    def jump(self, up=False):
+    def jump(self, up=False):  # up: holding Up from the start catches a rope overhead; it stays held for climbing on
+        if up:
+            self.hold_up(True)
         keyboard.PressKey(self.key("jump"))
-        time.sleep(0.25)
-        if up:
-            keyboard.PressKey(keyboard.VK_UP)
+        self.pause(0.25)
         keyboard.ReleaseKey(self.key("jump"))
-        time.sleep(0.25)
-        if up:
-            time.sleep(1)
-            keyboard.ReleaseKey(keyboard.VK_UP)
+        self.pause(0.25)
 
     def drop(self):  # Down + jump falls through the platform
         keyboard.PressKey(keyboard.VK_DOWN)
-        time.sleep(0.1)
+        self.pause(0.1)
         self.tap(self.key("jump"), 0.1)
-        time.sleep(0.2)
+        self.pause(0.2)
         keyboard.ReleaseKey(keyboard.VK_DOWN)
 
     def random_jump(self, chance):
         if random.randint(1, chance) == chance:
-            self.tap(self.key("jump"), 0.01)
+            self.press(self.key("jump"))
 
     def move_jump(self, direction, up=False):
+        self.facing = direction
         keyboard.PressKey(direction)
-        time.sleep(0.15)
-        keyboard.PressKey(self.key("jump"))
+        self.pause(0.15)
         if up:
-            keyboard.PressKey(keyboard.VK_UP)
-        time.sleep(0.25)
+            self.hold_up(True)  # Stays held for climbing on, as with jump
+        keyboard.PressKey(self.key("jump"))
+        self.pause(0.25)
         keyboard.ReleaseKey(self.key("jump"))
         keyboard.ReleaseKey(direction)
-        time.sleep(0.4)
-        if up:
-            time.sleep(1)
-            keyboard.ReleaseKey(keyboard.VK_UP)
+        self.pause(0.4)
 
     def loot(self):
-        self.tap(self.key("loot"), 0.01)
-
-    def random_move(self):
-        self.tap(random.choice((keyboard.VK_LEFT, keyboard.VK_RIGHT)), 0.2)
+        now = time.time()
+        if now - self.last_loot >= loot_interval:
+            self.press(self.key("loot"))
+            self.last_loot = now

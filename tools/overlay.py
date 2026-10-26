@@ -50,7 +50,8 @@ class Overlay:
         r: rects.Rect
         for r in new_rects:
             self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=thickness))
-            self.shapes.add(self.canvas.create_text((r.x1 + r.x2) / 2, r.y1 - 6, text=str(r.confidence), font=("Arial", 12)))
+            text = str(r.confidence) + (" %d%%" % round(r.health * 100) if getattr(r, "health", None) is not None else "")
+            self.shapes.add(self.canvas.create_text((r.x1 + r.x2) / 2, r.y1 - 6, text=text, font=("Arial", 12)))
             #  canvas.create_text(x, y, text=texto, font=("Arial", 12), fill="black")
         self.canvas.pack()
 
@@ -73,20 +74,42 @@ class Overlay:
             self.shapes.add(self.canvas.create_oval(px - 8, py - 8, px + 8, py + 8, fill='', outline='cyan', width=thickness))
         self.canvas.pack()
 
-    def render_platforms(self, mapper, frame_rect):  # Recorded platforms (lines), ladders and the player's feet, from map coords
-        for line in mapper.lines:
+    def render_platforms(self, mapper, frame_rect):  # Recorded platforms coloured by how safe from mobs they are, ladders (always
+        # safe: mobs don't climb) and the player's feet, from map coords. Orange: not watched long enough to tell yet
+        colors = {"safe": "#30e040", "occasional": "yellow", "busy": "red", "unknown": "orange"}
+        for safety, line in mapper.safety or [("unknown", line) for line in mapper.lines]:
             points = [mapper.to_screen(p, frame_rect) for p in line]
             if None not in points and len(points) >= 2:
-                self.shapes.add(self.canvas.create_line(*[c for p in points for c in p], fill='orange', width=3))
+                self.shapes.add(self.canvas.create_line(*[c for p in points for c in p], fill=colors[safety], width=3))
         for ladder in mapper.ladders:
             top, bottom = mapper.to_screen((ladder["x"], ladder["top"]), frame_rect), mapper.to_screen((ladder["x"], ladder["bottom"]), frame_rect)
             if top is not None and bottom is not None:
-                self.shapes.add(self.canvas.create_line(*top, *bottom, fill='yellow', width=3))
+                self.shapes.add(self.canvas.create_line(*top, *bottom, fill=colors["safe"], width=3, dash=(6, 2)))
         feet = mapper.feet
         point = mapper.to_screen(feet, frame_rect) if feet is not None else None
         if point is not None:
             x, y = point
             self.shapes.add(self.canvas.create_oval(x - 5, y - 5, x + 5, y + 5, fill='red', outline='white'))
+        self.canvas.pack()
+
+    def render_attack_ranges(self, player_rect, attacks):  # Each attack's reach around the player, on both sides. Solid: where a mob's
+        # nearer edge must be (and its centre's height) for the bot to use it (range_x, range_y); dotted: the extra height a jump attack
+        # reaches; dashed: how far a mobbing attack hits (hit_range, to mobs' nearer edges)
+        colors = ("#ff4040", "#ffb000", "#40c0ff", "#c060ff", "#40ff80")
+        x1, y1, x2, y2 = player_rect
+        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        for i, attack in enumerate(attacks):
+            color = colors[i % len(colors)]
+            top, bottom = cy - attack.range_y[1], cy - attack.range_y[0]  # range_y is height above the player's centre
+            for side in (1, -1):
+                near, far = cx + side * attack.range_x[0], cx + side * attack.range_x[1]
+                self.shapes.add(self.canvas.create_rectangle(min(near, far), top, max(near, far), bottom, outline=color, width=2))
+                if attack.jump_attack:
+                    self.shapes.add(self.canvas.create_rectangle(min(near, far), top - attack.jump_reach, max(near, far), top, outline=color, width=1, dash=(1, 3)))
+                if attack.min_mobs > 1:
+                    reach = cx + side * attack.reach
+                    self.shapes.add(self.canvas.create_rectangle(min(cx, reach), top - 3, max(cx, reach), bottom + 3, outline=color, width=1, dash=(6, 3)))
+            self.shapes.add(self.canvas.create_text(cx + attack.range_x[1] + 4, top + 14 * i, anchor=NW, text=attack.name, fill=color, font=("Arial", 10)))
         self.canvas.pack()
 
     def render_circle(self, new_rects: list, offset=6):

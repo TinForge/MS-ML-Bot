@@ -28,3 +28,9 @@ seaborn==0.13.2
 setuptools==78.1.0
 ultralytics==8.4.184
 ultralytics-thop==2.2.3
+
+# TensorRT, for the faster yolo11/weights.engine. 10.x rather than 11: 11 needs NVIDIA ModelOpt to build FP16 engines
+tensorrt-cu13==10.16.1.11
+# Only needed to export a new engine (in ms-model-yolo11s)
+onnx==1.23.2
+onnxslim==0.1.98

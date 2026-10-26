@@ -130,3 +130,6 @@ dmypy.json
 
 # Stitched minimaps and other per-map data, generated while playing
 maps/
+
+# YOLO dataset: sprites and generated images are game assets, never committed
+dataset/

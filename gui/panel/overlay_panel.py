@@ -5,7 +5,18 @@ from tkinter.ttk import *
 
 from gui import references
 from data import values
+from process import bot
 from tools import overlay
+
+
+OPTIONS = ["Monsters", "Platforms", "Attack Range", "Targets", "Player", "Window", "Minimap"]
+FLAGS = {  # Options that switch a values flag rather than just drawing
+    "Window": "show_window_rect",  # The detected game area
+    "Player": "show_player_rect",  # The player found by their nametag
+    "Minimap": "show_minimap",  # The minimap's map area and the player's dot
+    "Platforms": "show_platforms",  # Recorded platforms, ladders and the player's feet
+    "Attack Range": "show_attack_range",  # The bot profile's attack ranges around the player
+}
 
 
 class OverlayPanel(LabelFrame):
@@ -16,24 +27,25 @@ class OverlayPanel(LabelFrame):
         self.overlay_visible.grid(row=1, column=0, padx=15, pady=5)
         Button(self, text="Toggle", command=lambda: self.toggle_overlay()).grid(sticky=E, row=1, column=2, padx=0, pady=0)
 
-        OPTIONS = ["Raw Detect", "Stable Detect", "Velocity", "Targets", "Platforms"]
         self.selected_options = []
-        self.listbox = Listbox(self, selectmode=MULTIPLE, height=len(OPTIONS))
+        self.listbox = Listbox(self, selectmode=MULTIPLE, height=len(OPTIONS), exportselection=False)
         for option in OPTIONS:
             self.listbox.insert(END, option)
-
-        def handle_selection(event):
-            self.selected_options.clear()
-            selected_indices = self.listbox.curselection()
-            for index in selected_indices:
-                self.selected_options.append(OPTIONS[index])
-        self.listbox.bind("<<ListboxSelect>>", handle_selection)
+        self.listbox.bind("<<ListboxSelect>>", lambda event: self.on_selection())
 
         self.listbox.grid(row=1, column=1, pady=5, sticky="ew")  # ew expands east-west
 
         self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
 
+
+    def on_selection(self):  # Picked options are drawn; picking one also shows the overlay
+        picked = [OPTIONS[i] for i in self.listbox.curselection()]
+        if any(option not in self.selected_options for option in picked) and not overlay.is_visible:
+            overlay.enable_overlay()
+        self.selected_options = picked
+        for option, flag in FLAGS.items():  # These also turn on the work behind them, e.g. searching for the player
+            setattr(values, flag, option in picked)
 
     def toggle_overlay(self):
         overlay.toggle_overlay()
@@ -54,28 +66,17 @@ class OverlayPanel(LabelFrame):
             if values.show_minimap and values.minimap is not None:
                 overlay.instance.render_minimap(values.minimap)
 
+            profile = bot.instance.profile if bot.instance is not None else None
+            if values.show_attack_range and values.player_rect is not None and profile is not None:
+                overlay.instance.render_attack_ranges(values.player_rect, profile.attacks)
+
             if values.show_platforms and values.mapper is not None and values.window_rect is not None:
                 overlay.instance.render_platforms(values.mapper, values.window_rect)
 
             if values.detected_instances is not None:
 
-                if "Raw Detect" in self.selected_options:
+                if "Monsters" in self.selected_options:  # The detector's boxes, with confidence and health
                     overlay.instance.render_box(values.detected_instances)
-
-                if "Stable Detect" in self.selected_options:
-                    valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
-                    rects = [rect.average() for rect in valid_trackers]
-                    overlay.instance.render_box(rects)
-                    invalid_trackers = [tracker for tracker in values.detected_trackers if not tracker.valid]
-                    rects = [rect.average() for rect in invalid_trackers]
-                    for r in rects:
-                        r.color = 'gray'
-                    # overlay.instance.render_box(rects)
-
-                if "Velocity" in self.selected_options:
-                    valid_trackers = [tracker for tracker in values.detected_trackers if tracker.valid]
-                    rects = [rect.extrapolated_average() for rect in valid_trackers]
-                    overlay.instance.render_box(rects)
 
                 if "Targets" in self.selected_options:
                     if values.debug_player is not None:
@@ -87,8 +88,3 @@ class OverlayPanel(LabelFrame):
                     if values.debug_path is not None:
                         d = values.debug_path                        
                         overlay.instance.render_floor([d])
-
-
-                if "Platforms" in self.selected_options:
-                    ground_list = [item for item in values.detected_instances if item.name == "Platform"]
-                    overlay.instance.render_floor(ground_list)

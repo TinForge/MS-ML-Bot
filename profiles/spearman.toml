@@ -1,6 +1,7 @@
 # Spearman / polearm warrior (previously WarriorLong)
 description = "Warrior with a long-range polearm or spear"
 behaviour = "melee"      # melee or ranged
+gone_delay = 0.5        # Without a health bar after a hit lands, seconds to watch before attacking again if the mob is still there
 
 [keys]
 jump = "Alt"
@@ -14,7 +15,8 @@ platform_height = 100    # Highest platform the bot tries to jump onto
 [[attacks]]
 name = "Basic attack"
 key = "Ctrl"
-range_x = [70, 150]      # Horizontal distance to the mob; closer than the minimum makes the bot step back
+hit_time = 0.35          # Seconds from the key press until the hit shows on the mob
+range_x = [45, 125]      # From your centre to the mob's nearer edge; closer than the minimum makes the bot step back
 range_y = [-30, 75]      # How far the mob may be above (+) or below (-) the player
 jump_attack = true       # Jump and attack mobs a little above range_y
 jump_reach = 75          # How much higher a jump attack reaches

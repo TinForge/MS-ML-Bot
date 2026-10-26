@@ -46,7 +46,8 @@ class BotThread(threading.Thread):
     def calculate(self):
         if values.window_active is False or self.behaviour is None:
             return
-        situation = behaviours.Situation.from_values(time.time(), self.executor.attack_last_used)
+        facing = {keyboard.VK_LEFT: "left", keyboard.VK_RIGHT: "right"}.get(self.executor.facing)
+        situation = behaviours.Situation.from_values(time.time(), self.executor.attack_last_used, facing)
         action = self.behaviour.decide(situation)
         values.debug_action = action.label
         self.executor.run(action)
@@ -70,6 +71,7 @@ class BotThread(threading.Thread):
             self.executor.stop_moving()
         self.profile = profile
         values.nav_jump_height = profile.platform_height  # Used by navigation to decide which platforms are in reach
+        values.nav_clump_range = profile.clump_range  # Used by navigation to prefer bunched-up mobs
         self.behaviour = behaviours.for_profile(profile)
         self.executor = executor.Executor(profile)
 

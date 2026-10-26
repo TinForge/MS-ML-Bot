@@ -11,4 +11,4 @@ requires-python = ">=3.13"
 # Dependencies are pinned in requirements.txt (torch needs the CUDA index)
 
 [tool.setuptools.packages.find]
-include = ["data*", "gui*", "process*", "tools*", "yolov5*"]
+include = ["data*", "gui*", "process*", "tools*", "yolov5*", "yolo11*"]

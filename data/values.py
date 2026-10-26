@@ -22,6 +22,7 @@ minimap = None  # tools.minimap.Minimap with its map area in screen pixels, or N
 show_minimap = False
 record_platforms = False
 show_platforms = False
+show_attack_range = False  # Draws the bot profile's attack ranges around the player on the overlay
 mapper = None  # tools.map_recorder.Mapper, set by detection.py
 
 # Set through tools/timer.py, name: (smoothed ms, time.time() of last sample)
@@ -34,6 +35,7 @@ bot_active = False
 
 looting_active = False
 randomizer_active = False
+human_input = False  # Human Key Presses: bot taps timed like a person's (config.toml [input]) instead of exact and instant
 potion_active = False
 
 # Set by bot_panel.py; bot.py reloads the profile whenever the name or version changes
@@ -58,6 +60,7 @@ detected_instances = None
 debug_player = None
 debug_platform = None
 debug_mob = None
+debug_crowd = []  # (dx, dy) of each mob in the player's reach, set with debug_mob
 debug_x_distance = 0
 debug_y_distance = 0
 debug_direction = None
@@ -65,14 +68,14 @@ debug_path = None
 debug_on_ladder = False
 debug_route = None  # Navigate: up, down or walk
 nav_jump_height = 100  # Highest platform worth jumping for, from the bot profile
+nav_clump_range = 0  # How far in front the profile's mobbing attack hits, 0 without one
 
 debug_action = "nothing"
 debug_state = "nothing"
 
 model_iou = 0.5
-model_conf = 0.65
+model_conf = 0.8
 
-detected_trackers = []
 
 
 def update():

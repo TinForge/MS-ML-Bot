@@ -22,3 +22,9 @@ def grab(bbox):  # PIL image of the screen area (x1, y1, x2, y2), like ImageGrab
     if screen is None or x1 < 0 or y1 < 0 or x2 > screen.shape[1] or y2 > screen.shape[0]:  # No frame yet, or off the primary monitor
         return ImageGrab.grab(bbox=bbox, all_screens=True)
     return Image.fromarray(screen[y1:y2, x1:x2])
+
+
+def grab_game(window_rect, crop=True):  # (image, rect it was grabbed from): the game area, or the whole screen with rect None
+    if crop and window_rect is not None:
+        return grab(window_rect), window_rect
+    return ImageGrab.grab(), None  # Detections are less accurate on the whole screen
