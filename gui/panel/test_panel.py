@@ -3,6 +3,8 @@
 from tkinter import *
 from tkinter.ttk import *
 
+from gui.widgets import update
+
 from data import values
 from tools import window_functions
 
@@ -27,4 +29,4 @@ class TestPanel(LabelFrame):
 
 
     def refresh(self):
-        self.window_rect_display['text'] = str(values.window_rect)
+        update(self.window_rect_display, text=str(values.window_rect))

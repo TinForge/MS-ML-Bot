@@ -26,14 +26,10 @@ class Attack:
     hit_time: float = 0.35  # Seconds from pressing it until its hit shows on the mob (bar appears or drops)
     opener: bool = False  # Only used for the first hit on a mob, e.g. a power attack
     min_mobs: int = 1  # Only used when at least this many mobs are in reach, e.g. a mobbing attack
-    min_health: float = 0  # Only used while the target has at least this share of its health (0-1), e.g. a power attack
     hit_range: int = None  # How far in front of the character it hits mobs, for counting min_mobs; None: range_x's maximum
 
-    def usable(self, new_target, mobs, jumping=False, health=None):  # mobs: (distance, height) of each mob on the target's side, target included;
-        # health: the target's share left from its health bar, None without a bar (not hit yet: full)
+    def usable(self, new_target, mobs, jumping=False):  # mobs: (distance, height) of each mob on the target's side, target included
         if self.opener and not new_target:
-            return False
-        if self.min_health > 0 and (1.0 if health is None else health) < self.min_health:
             return False
         if self.min_mobs > 1:
             reach = self.hits_jumping if jumping else self.hits
@@ -78,17 +74,17 @@ class Profile:
     gone_delay: float = 0.5  # Seconds to keep watching after a hit lands when the target shows no bar: if it's still there then, attack again
     description: str = ""
 
-    def attack_for(self, distance, height, last_used=None, now=0, new_target=True, mobs=None, health=None):  # First ready attack that reaches the target, or None
+    def attack_for(self, distance, height, last_used=None, now=0, new_target=True, mobs=None):  # First ready attack that reaches the target, or None
         mobs = mobs if mobs is not None else [(distance, height)]
         for attack in self.ready_attacks(last_used, now):
-            if attack.reaches(distance, height) and attack.usable(new_target, mobs, health=health):
+            if attack.reaches(distance, height) and attack.usable(new_target, mobs):
                 return attack
         return None
 
-    def jump_attack_for(self, distance, height, last_used=None, now=0, new_target=True, mobs=None, health=None):
+    def jump_attack_for(self, distance, height, last_used=None, now=0, new_target=True, mobs=None):
         mobs = mobs if mobs is not None else [(distance, height)]
         for attack in self.ready_attacks(last_used, now):
-            if attack.reaches_jumping(distance, height) and attack.usable(new_target, mobs, jumping=True, health=health):
+            if attack.reaches_jumping(distance, height) and attack.usable(new_target, mobs, jumping=True):
                 return attack
         return None
 
@@ -153,11 +149,6 @@ def from_dict(name, data):
             raise ProfileError("%s: %s must be a number of seconds" % (name, where))
         return float(value)
 
-    def health(value, where):
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
-            raise ProfileError("%s: %s min_health must be a share from 0 to 1, e.g. 0.4 for 40%%" % (name, where))
-        return float(value)
-
     if "attack_delay" in data:
         raise ProfileError("%s: attack_delay was replaced by hit_time on each attack and gone_delay (see profiles/swordsman.toml)" % name)
     behaviour = data.get("behaviour", "melee")
@@ -176,14 +167,14 @@ def from_dict(name, data):
         attack = Attack(name=a.get("name", "Attack %d" % (i + 1)), key=key_name(a["key"], where),
                               range_x=pair(a["range_x"], where + " range_x"), range_y=pair(a["range_y"], where + " range_y"),
                               jump_attack=bool(a.get("jump_attack", False)), jump_reach=a.get("jump_reach", 75), cooldown=a.get("cooldown", 0),
-                              opener=bool(a.get("opener", False)), min_mobs=a.get("min_mobs", 1), min_health=health(a.get("min_health", 0), where),
+                              opener=bool(a.get("opener", False)), min_mobs=a.get("min_mobs", 1),
                               hit_range=a.get("hit_range"), hit_time=seconds(a.get("hit_time", 0.35), where + " hit_time"))
         if a.get("enabled", True):  # Switched off (e.g. a power attack on a map of weak mobs): checked like the rest, then left out
             attacks.append(attack)
     if not attacks:
         raise ProfileError("%s: needs at least one enabled [[attacks]] entry" % name)
-    if all(a.opener or a.min_mobs > 1 or a.min_health > 0 for a in attacks):
-        raise ProfileError("%s: needs an attack without opener, min_mobs or min_health, for when none of them applies" % name)
+    if all(a.opener or a.min_mobs > 1 for a in attacks):
+        raise ProfileError("%s: needs an attack without opener or min_mobs, for when neither applies" % name)
 
     mobility = []
     for m in data.get("mobility", []):

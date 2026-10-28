@@ -4,7 +4,7 @@ from gui import window
 import time
 import threading
 from data import config, values, profiles
-from process import behaviours, executor
+from process import behaviours, executor, kills
 from tools import keyboard
 
 potion_cooldown = config.potion_cooldown  # Seconds before the same key can be pressed again, shared when HP and MP use the same key
@@ -51,6 +51,8 @@ class BotThread(threading.Thread):
         action = self.behaviour.decide(situation)
         values.debug_action = action.label
         self.executor.run(action)
+        if action.attack is not None and values.debug_mob is not None:  # For EXP Kill Check: the mob a kill right after this is of
+            kills.instance.attacked(values.debug_mob, self.executor.attack_last_used[action.attack.name])
         if values.looting_active:  # spam loot
             self.executor.loot()
 

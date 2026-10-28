@@ -7,6 +7,7 @@ import numpy as np
 import PIL.Image
 import PIL.ImageTk
 
+from gui.widgets import update
 from data import values
 
 name_scale = 2  # The name is shown as its pixels from the status bar, scaled up to be readable
@@ -52,14 +53,14 @@ class DebugPanel(LabelFrame):
 
     def toggle_recording(self):  # Records the platforms and ladders the player walks and climbs
         values.record_platforms = not values.record_platforms
-        self.record_button.configure(text="Stop" if values.record_platforms else "Record")
+        update(self.record_button, text="Stop" if values.record_platforms else "Record")
 
     def refresh(self):
         rect = values.window_rect
         if rect is None:
-            self.window_rect_display['text'] = "Window not found"
+            update(self.window_rect_display, text="Window not found")
         else:
-            self.window_rect_display['text'] = "%dx%d (%d, %d)" % (rect[2] - rect[0], rect[3] - rect[1], rect[0], rect[1])
+            update(self.window_rect_display, text="%dx%d (%d, %d)" % (rect[2] - rect[0], rect[3] - rect[1], rect[0], rect[1]))
         self.refresh_player()
         self.refresh_minimap()
         self.refresh_mapping()
@@ -68,7 +69,7 @@ class DebugPanel(LabelFrame):
         name = values.player_name
         if name is None:
             self.name_image = self.name_pixels = None
-            self.player_display.configure(image="", text="Name not found")
+            update(self.player_display, image="", text="Name not found")
             return
         if self.name_pixels is None or not np.array_equal(name, self.name_pixels):  # Only rebuild the image when the name changes
             self.name_pixels = name
@@ -78,15 +79,15 @@ class DebugPanel(LabelFrame):
             position = "  (%d, %d)" % ((player[0] + player[2]) / 2, player[3])
         else:
             position = "  not on screen" if values.show_player_rect else ""  # Only searched for while shown or detecting
-        self.player_display.configure(image=self.name_image, text=position)
+        update(self.player_display, image=self.name_image, text=position)
 
     def refresh_minimap(self):
         m = values.minimap
         if m is None:
             self.map_image = self.map_id = None
-            self.map_name_display.configure(image="")
+            update(self.map_name_display, image="")
             self.map_name_display.pack_forget()  # No empty line above the message
-            self.map_display.configure(text="Minimap not found")
+            update(self.map_display, text="Minimap not found")
             return
         if m.map_id != self.map_id:  # Only rebuild the name image when the map changes
             self.map_id = m.map_id
@@ -98,13 +99,13 @@ class DebugPanel(LabelFrame):
             text += "\nmap position (%d, %d)" % m.position
         if not self.map_name_display.winfo_manager():  # Hidden while the minimap was missing
             self.map_name_display.pack(anchor=W, before=self.map_display)
-        self.map_name_display.configure(image=self.map_image)
-        self.map_display.configure(text=text)
+        update(self.map_name_display, image=self.map_image)
+        update(self.map_display, text=text)
 
     def refresh_mapping(self):
         mapper = values.mapper
         if mapper is None or mapper.calibration is None:
-            self.recording_display.configure(text="Platforms: no map yet")
+            update(self.recording_display, text="Platforms: no map yet")
             return
         scale = mapper.calibration.scale
-        self.recording_display.configure(text="Platforms: %d, ladders: %d%s" % (len(mapper.lines), len(mapper.ladders), ", scale %.1f" % scale if scale else ""))
+        update(self.recording_display, text="Platforms: %d, ladders: %d%s" % (len(mapper.lines), len(mapper.ladders), ", scale %.1f" % scale if scale else ""))

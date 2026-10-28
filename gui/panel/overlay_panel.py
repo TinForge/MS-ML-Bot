@@ -4,12 +4,13 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import references
+from gui.widgets import update
 from data import values
 from process import bot
 from tools import overlay
 
 
-OPTIONS = ["Monsters", "Platforms", "Attack Range", "Targets", "Player", "Window", "Minimap"]
+OPTIONS = ["Monsters", "Platforms", "Route", "Attack Range", "Targets", "Player", "Window", "Minimap"]
 FLAGS = {  # Options that switch a values flag rather than just drawing
     "Window": "show_window_rect",  # The detected game area
     "Player": "show_player_rect",  # The player found by their nametag
@@ -52,7 +53,7 @@ class OverlayPanel(LabelFrame):
 
 
     def refresh(self):
-        self.overlay_visible.configure(image=(references.red_icon, references.green_icon)[overlay.is_visible])
+        update(self.overlay_visible, image=(references.red_icon, references.green_icon)[overlay.is_visible])
 
         if overlay.instance is not None:
             overlay.instance.clear_shapes()
@@ -73,9 +74,13 @@ class OverlayPanel(LabelFrame):
             if values.show_platforms and values.mapper is not None and values.window_rect is not None:
                 overlay.instance.render_platforms(values.mapper, values.window_rect)
 
+            route = values.planned_route  # Read once: the calculations thread replaces it every frame
+            if "Route" in self.selected_options and route and values.mapper is not None and values.window_rect is not None:
+                overlay.instance.render_route(values.mapper, values.window_rect, route)
+
             if values.detected_instances is not None:
 
-                if "Monsters" in self.selected_options:  # The detector's boxes, with confidence and health
+                if "Monsters" in self.selected_options:  # The detector's boxes, with confidence
                     overlay.instance.render_box(values.detected_instances)
 
                 if "Targets" in self.selected_options:

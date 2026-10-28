@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import references
+from gui.widgets import update
 from data import values
 from tools import overlay
 
@@ -68,16 +69,16 @@ class DiagnosticsPanel(LabelFrame):
 
 
     def refresh(self):
-        self.iou_text.configure(text="IOU: " + str(values.model_iou))
-        self.conf_text.configure(text="CONF: " + str(values.model_conf))
+        update(self.iou_text, text="IOU: " + str(values.model_iou))
+        update(self.conf_text, text="CONF: " + str(values.model_conf))
 
-        self.debug1.configure(text="State: " + str(values.debug_state))
-        self.debug2.configure(text="Action: " + str(values.debug_action))
-        self.debug3.configure(text="Relative X: " + str(int(values.debug_x_distance)))
-        self.debug4.configure(text="Relative Y: " + str(int(values.debug_y_distance)))
+        update(self.debug1, text="State: " + str(values.debug_state))
+        update(self.debug2, text="Action: " + str(values.debug_action))
+        update(self.debug3, text="Relative X: " + str(int(values.debug_x_distance)))
+        update(self.debug4, text="Relative Y: " + str(int(values.debug_y_distance)))
 
-        self.debug5.configure(text="Player" if values.debug_player is not None else "No Player")
-        self.debug6.configure(text="Platform" if values.debug_platform is not None else "No Platform")
-        self.debug7.configure(text="Mob" if values.debug_mob is not None else "No Mob")
-        self.debug8.configure(text="Path" if values.debug_path is not None else "No Path")
-        self.debugX.configure(text="Ladder" if values.debug_on_ladder is True else "No Ladder")
+        update(self.debug5, text="Player" if values.debug_player is not None else "No Player")
+        update(self.debug6, text="Platform" if values.debug_platform is not None else "No Platform")
+        update(self.debug7, text="Mob" if values.debug_mob is not None else "No Mob")
+        update(self.debug8, text="Path" if values.debug_path is not None else "No Path")
+        update(self.debugX, text="Ladder" if values.debug_on_ladder is True else "No Ladder")

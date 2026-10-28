@@ -50,8 +50,7 @@ class Overlay:
         r: rects.Rect
         for r in new_rects:
             self.shapes.add(self.canvas.create_rectangle(r.x1, r.y1, r.x2, r.y2, fill='', outline=r.color, width=thickness))
-            text = str(r.confidence) + (" %d%%" % round(r.health * 100) if getattr(r, "health", None) is not None else "")
-            self.shapes.add(self.canvas.create_text((r.x1 + r.x2) / 2, r.y1 - 6, text=text, font=("Arial", 12)))
+            self.shapes.add(self.canvas.create_text((r.x1 + r.x2) / 2, r.y1 - 6, text=str(r.confidence), font=("Arial", 12)))
             #  canvas.create_text(x, y, text=texto, font=("Arial", 12), fill="black")
         self.canvas.pack()
 
@@ -110,6 +109,19 @@ class Overlay:
                     reach = cx + side * attack.reach
                     self.shapes.add(self.canvas.create_rectangle(min(cx, reach), top - 3, max(cx, reach), bottom + 3, outline=color, width=1, dash=(6, 3)))
             self.shapes.add(self.canvas.create_text(cx + attack.range_x[1] + 4, top + 14 * i, anchor=NW, text=attack.name, fill=color, font=("Arial", 10)))
+        self.canvas.pack()
+
+    def render_route(self, mapper, frame_rect, points):  # The route being followed: a line from the feet through each hop to where it
+        # ends, a dot where each hop is taken, and an arrow at the end
+        screen = [mapper.to_screen(p, frame_rect) for p in points]
+        if None in screen:
+            return
+        screen = [p for i, p in enumerate(screen) if i == 0 or abs(p[0] - screen[i - 1][0]) + abs(p[1] - screen[i - 1][1]) > 1]  # The
+        if len(screen) < 2:  # arrow needs a last segment of some length: a rope's top and the platform there are the same point
+            return
+        self.shapes.add(self.canvas.create_line(*[c for p in screen for c in p], fill="#ff40ff", width=3, arrow=LAST, arrowshape=(12, 14, 5)))
+        for x, y in screen[1:-1]:
+            self.shapes.add(self.canvas.create_oval(x - 4, y - 4, x + 4, y + 4, fill="#ff40ff", outline="white"))
         self.canvas.pack()
 
     def render_circle(self, new_rects: list, offset=6):

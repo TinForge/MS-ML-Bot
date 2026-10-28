@@ -15,7 +15,6 @@ class Rect:
         self.size = (self.x2 - self.x1) * (self.y2 - self.y1)
         self.confidence = confidence
         self.timestamp = timestamp
-        self.health = None  # Mobs: share of health left from the bar above them, None without one (see tools/mob_health.py)
 
     def top_at(self, x):  # Height of the top edge at x: flat for a box, see PlatformLine for slopes
         return self.y1

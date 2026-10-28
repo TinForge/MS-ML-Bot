@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 from data import config
-from tools import stat_reader
+from tools import screen, stat_reader
 
 text_threshold = 200  # Name text is near white, both in the status bar and on nametags
 name_area = (-140, 10, -12, 28)  # Where the name sits relative to the HP label: x1, y1, x2, y2
@@ -16,8 +16,9 @@ def white_mask(rgb):
     return rgb.min(axis=2) > text_threshold
 
 
-def read_name(im):  # Name pixels (bool array) from the status bar of a game area image, or None
-    strip = np.asarray(im.crop((0, max(0, im.height - stat_reader.search_height), im.width, im.height)))
+def read_name(im):  # Name pixels (bool array) from the status bar of a game area frame, or None
+    rgb = screen.pixels(im)
+    strip = rgb[max(0, rgb.shape[0] - stat_reader.search_height):]
     label = stat_reader.find_label(stat_reader.text_mask(strip), 'HP')
     if label is None:
         return None
@@ -30,8 +31,7 @@ def read_name(im):  # Name pixels (bool array) from the status bar of a game are
     return area[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
 
 
-def match(im, name):  # Top-left of the name in this image, or None
-    scene = np.asarray(im)
+def match(scene, name):  # Top-left of the name in this RGB array, or None
     if scene.shape[0] < name.shape[0] or scene.shape[1] < name.shape[1]:
         return None
     scene = cv2.inRange(scene, (text_threshold + 1,) * 3, (255,) * 3) // 255  # Same as white_mask, but much faster on a whole frame
@@ -45,15 +45,18 @@ def match(im, name):  # Top-left of the name in this image, or None
 def find_nametag(im, name, near=None):  # Top-left of the player's nametag in image coords, or None
     if name is None:
         return None
-    bottom = im.height - stat_reader.search_height  # Leaves out the status bar, which shows the name too
+    rgb = screen.pixels(im)
+    height, width = rgb.shape[:2]
+    bottom = height - stat_reader.search_height  # Leaves out the status bar, which shows the name too
     if near is not None:  # Characters move little between frames, so a small area around the last nametag usually has it
         x, y = near
         margin_x, margin_y = search_margin
-        area = (max(0, x - margin_x), max(0, y - margin_y), min(im.width, x + name.shape[1] + margin_x), min(bottom, y + name.shape[0] + margin_y))
-        loc = match(im.crop(area), name)
+        x1, y1 = max(0, x - margin_x), max(0, y - margin_y)
+        x2, y2 = min(width, x + name.shape[1] + margin_x), min(bottom, y + name.shape[0] + margin_y)
+        loc = match(rgb[y1:y2, x1:x2], name)
         if loc is not None:
-            return loc[0] + area[0], loc[1] + area[1]
-    return match(im.crop((0, 0, im.width, bottom)), name)
+            return loc[0] + x1, loc[1] + y1
+    return match(rgb[:max(bottom, 0)], name)
 
 
 def character_rect(nametag, name):  # Character rect (x1, y1, x2, y2), standing directly above the nametag

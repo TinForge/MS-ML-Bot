@@ -1,7 +1,7 @@
 # Bowman (example: set the skill keys to your in-game bindings)
 description = "Bowman: shoots from a distance, backs off when mobs get close, never jump attacks"
 behaviour = "ranged"
-gone_delay = 0.5        # Without a health bar after a hit lands, seconds to watch before attacking again if the mob is still there
+gone_delay = 0.5        # After a hit lands, seconds to watch before attacking again if the mob is still there
 
 [keys]
 jump = "Alt"

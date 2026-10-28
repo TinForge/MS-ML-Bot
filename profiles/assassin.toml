@@ -1,7 +1,7 @@
 # Thief with claws (example: set the skill keys to your in-game bindings)
 description = "Assassin: throws from mid range and uses Flash Jump to cover distance"
 behaviour = "ranged"
-gone_delay = 0.5        # Without a health bar after a hit lands, seconds to watch before attacking again if the mob is still there
+gone_delay = 0.5        # After a hit lands, seconds to watch before attacking again if the mob is still there
 
 [keys]
 jump = "Alt"

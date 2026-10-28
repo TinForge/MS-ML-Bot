@@ -2,6 +2,7 @@
 import os
 import time
 
+import cv2
 import numpy as np
 from ultralytics import YOLO
 
@@ -16,29 +17,32 @@ COLORS = {"Mob": "red", "Loot": "cyan"}
 class Model:  # run() returns this frame's detections as Rects in screen coords; last_frame is the image they came from
     def __init__(self):
         self.model = load()
-        self.last_frame = None  # Last grabbed game area, None if the grab wasn't cropped to it
+        self.last_frame = None  # Last grabbed game area (RGB array), None if the grab wasn't cropped to it
         self.last_frame_rect = None  # Screen rect last_frame was grabbed from
+        self.last_frame_time = None  # time.time() last_frame was grabbed at
 
-    def run(self, crop=True, debug=True):
+    def run(self, crop=True, debug=False):
         start = time.perf_counter()
         now = int(time.time() * 1000)  # When the frame was grabbed: detections show the game as it was then
-        im, frame_rect = screen.grab_game(values.window_rect, crop)  # window_rect read once: the GUI thread keeps updating it
+        pixels, frame_rect = screen.grab_game(values.window_rect, crop)  # RGB array; window_rect read once: the GUI thread keeps updating it
         offset_x, offset_y = frame_rect[:2] if frame_rect is not None else (0, 0)  # Shifts detections back to screen coords
-        self.last_frame, self.last_frame_rect = (im, frame_rect) if frame_rect is not None else (None, None)
+        self.last_frame, self.last_frame_rect = (pixels, frame_rect) if frame_rect is not None else (None, None)  # For the stats thread
+        self.last_frame_time = now / 1000
         timer.record("Grab", start)
 
         start = time.perf_counter()
-        result = self.model.predict(im, imgsz=config.model_imgsz, conf=values.model_conf, iou=values.model_iou, verbose=False)[0]
-        boxes = result.boxes
-        coords, confidences, labels = boxes.xyxy.cpu().numpy(), boxes.conf.cpu().numpy(), boxes.cls.cpu().numpy().astype(int)
+        bgr = cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR)  # predict() reads arrays as BGR, like OpenCV
+        result = self.model.predict(bgr, imgsz=config.model_imgsz, conf=values.model_conf, iou=values.model_iou, verbose=False)[0]
+        boxes = result.boxes.data.cpu().numpy()  # x1, y1, x2, y2, confidence, class
         timer.record("Inference", start)  # After .cpu(), which waits for the GPU to finish
         if debug:
             print(result.verbose())
 
         detections = []
-        for (x1, y1, x2, y2), confidence, label in zip(coords, confidences, labels):
-            name = result.names[label]
-            detections.append(rects.Rect(name, COLORS.get(name, "white"), x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y, round(float(confidence), 2), now))
+        for x1, y1, x2, y2, confidence, label in boxes:
+            name = result.names[int(label)]
+            detections.append(rects.Rect(name, COLORS.get(name, "white"), x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y,
+                                         round(float(confidence), 2), now))
         return detections
 
 
@@ -46,7 +50,7 @@ def load():  # The TensorRT engine if there is one that works on this GPU, else 
     if os.path.exists(engine):
         try:
             model = YOLO(engine, task="detect")
-            model.predict(np.zeros((64, 64, 3), np.uint8), imgsz=config.model_imgsz, verbose=False)  # Fails here if the engine was built for another GPU or TensorRT
+            model.predict(np.zeros((64, 64, 3), np.uint8), imgsz=config.model_imgsz, verbose=False)  # Fails here if built for another GPU
             print("Detection model: TensorRT engine")
             return model
         except Exception as e:

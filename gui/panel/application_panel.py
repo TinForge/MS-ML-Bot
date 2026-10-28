@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import references
+from gui.widgets import update
 from data import values
 from tools import window_functions
 from tools.persistent import save_data
@@ -37,5 +38,5 @@ class ApplicationPanel(LabelFrame):
 
 
     def refresh(self):
-        self.window_found.configure(image=(references.red_icon, references.green_icon)[values.window_found])
-        self.window_active.configure(image=(references.red_icon, references.green_icon)[values.window_active])
+        update(self.window_found, image=(references.red_icon, references.green_icon)[values.window_found])
+        update(self.window_active, image=(references.red_icon, references.green_icon)[values.window_active])

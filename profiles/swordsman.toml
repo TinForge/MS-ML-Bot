@@ -1,7 +1,7 @@
 # Sword warrior (previously WarriorShort)
 description = "Warrior with a short-range one or two-handed sword"
 behaviour = "melee"
-gone_delay = 1.0        # Without a health bar after a hit lands, seconds to watch before attacking again if the mob is still there
+gone_delay = 0.1        # After a hit lands, seconds to watch before attacking again if the mob is still there
 
 [keys]
 jump = "Alt"
@@ -16,6 +16,7 @@ range_x = [0, 75]
 range_y = [-30, 25]
 min_mobs = 2             # Only when at least this many mobs are in reach on the side it hits
 hit_range = 100          # How far in front of the character it hits mobs (range_x is when to use it)
+enabled = true
 
 [[attacks]]
 name = "Power Strike"
@@ -23,7 +24,8 @@ key = "Space"
 hit_time = 0.2          # Seconds from the key press until the hit shows on the mob
 range_x = [0, 75]
 range_y = [-30, 25]
-min_health = 0.4         # Only while the mob has at least 40% of its health left (from its health bar; none yet counts as full)
+opener = true            # Only for the first hit on each mob
+enabled = true
 
 [[attacks]]
 name = "Basic attack"

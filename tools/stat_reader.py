@@ -1,4 +1,4 @@
-# Reads HP/MP from the status bar by matching the game's pixel font
+# Reads HP/MP and EXP from the status bar by matching the game's pixel font
 
 import re
 import cv2
@@ -7,11 +7,15 @@ from tools import screen
 
 search_height = 80  # Status bar sits at the bottom of the game area
 text_width = 90  # Room for "[99999/99999]" after the label
+exp_text_width = 260  # Room after the MP label for its value, the EXP label and "1,234,567[99.99%]"
 label_tolerance = 2  # Mismatched pixels allowed when finding a label
 
 # Glyphs of the status bar font, cropped to their visible pixels
 FONT = {
     '/': ('..#', '..#', '.#.', '.#.', '#..', '#..'),
+    ',': ('.#', '#.'),
+    '.': ('#',),
+    '%': ('.#....#', '#.#..#.', '.#..#..', '...#...', '..#..#.', '.#..#.#', '#....#.'),
     '0': ('.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'),
     '1': ('.#', '##', '.#', '.#', '.#', '.#', '.#'),
     '2': ('.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'),
@@ -42,6 +46,7 @@ def to_mask(rows):
 font_masks = {ch: to_mask(rows) for ch, rows in FONT.items()}
 label_masks = {name: to_mask(rows).astype(np.float32) for name, rows in LABELS.items()}
 value_pattern = re.compile(r'\[(\d+)/(\d+)\]')
+exp_pattern = re.compile(r'^\[\d+/\d+\]\D*?(\d[\d,]*)\[(\d+\.\d+)%\]')  # MP's value, the EXP label (unknown glyphs), then EXP
 
 
 def text_mask(rgb):  # Light text (white labels, yellow values) on the dark bar
@@ -90,10 +95,25 @@ def read_value(mask, name):  # Returns (current, max), or None if not readable
     return int(match[1]), int(match[2])
 
 
-def read_frame(im):  # Reads from an already grabbed image of the game area; returns (hp, mp), each (current, max) or None
-    strip = im.crop((0, max(0, im.height - search_height), im.width, im.height))
-    mask = text_mask(np.asarray(strip))
-    return read_value(mask, 'HP'), read_value(mask, 'MP')
+def read_exp(mask):  # Returns (exp, percent), or None if not readable. Its label is a different font, but it's always right of
+    # MP's value on the same rows
+    loc = find_label(mask, 'MP')
+    if loc is None:
+        return None
+    x, y = loc
+    height, width = label_masks['MP'].shape
+    match = exp_pattern.search(read_glyphs(mask[y:y + height, x + width:x + width + exp_text_width]))
+    if match is None:
+        return None
+    return int(match[1].replace(',', '')), float(match[2])
+
+
+def read_frame(im):  # Reads from an already grabbed frame of the game area; returns (hp, mp, exp): hp and mp each (current, max),
+    # exp (exp, percent), any of them None if not readable
+    rgb = screen.pixels(im)
+    strip = rgb[max(0, rgb.shape[0] - search_height):]
+    mask = text_mask(strip)
+    return read_value(mask, 'HP'), read_value(mask, 'MP'), read_exp(mask)
 
 
 def grab(window_rect):  # Just the bottom of the game area, or None if not found
@@ -106,7 +126,7 @@ def grab(window_rect):  # Just the bottom of the game area, or None if not found
 def read(window_rect):  # Grabs the bottom of the game area itself
     im = grab(window_rect)
     if im is None:
-        return None, None
+        return None, None, None
     return read_frame(im)
 
 

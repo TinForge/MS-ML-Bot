@@ -14,7 +14,9 @@ show_window_rect = False
 # Set by detection.py from the status bar, (current, max) or None if not readable
 player_hp = None
 player_mp = None
+player_exp = None  # (exp, percent) from the status bar, None if unknown
 stats_read_id = 0  # Increments with every HP/MP reading
+player_read_id = 0  # Increments with every search for the player (and map reading), which calculations plan from
 player_name = None  # Name pixels (bool array) from the status bar
 player_rect = None  # Player character in screen pixels (x1, y1, x2, y2), found by their nametag
 show_player_rect = False
@@ -37,6 +39,7 @@ looting_active = False
 randomizer_active = False
 human_input = False  # Human Key Presses: bot taps timed like a person's (config.toml [input]) instead of exact and instant
 potion_active = False
+exp_check_active = True  # EXP Kill Check: kills told from EXP going up (process/kills.py)
 
 # Set by bot_panel.py; bot.py reloads the profile whenever the name or version changes
 bot_profile = None
@@ -69,13 +72,14 @@ debug_on_ladder = False
 debug_route = None  # Navigate: up, down or walk
 nav_jump_height = 100  # Highest platform worth jumping for, from the bot profile
 player_speed = None  # Sideways speed in px/s from the movement tracker (negative: left), None if unknown
+planned_route = None  # Map points of the route being followed across the recorded map (see RoutePlanner.path), None without one
 nav_clump_range = 0  # How far in front the profile's mobbing attack hits, 0 without one
 
 debug_action = "nothing"
 debug_state = "nothing"
 
 model_iou = 0.5
-model_conf = 0.8
+model_conf = 0.9
 
 
 

@@ -1,9 +1,11 @@
 # Fighting styles: decide what to do from a snapshot of the game, without pressing any keys
 
+import random
 from dataclasses import dataclass, field
 
 from data import values
 from data.profiles import Profile
+from process import kills
 
 
 @dataclass
@@ -19,8 +21,9 @@ class Situation:  # One tick's view of the game, built from values set by calcul
     attack_last_used: dict = field(default_factory=dict)  # Attack name: time it was last used
     target_seen: float = None  # Attack: time.time() of the detection frame the mob was last seen in, None if unknown
     crowd: list = None  # Attack: (dx, dy) of every mob in reach, the target included
-    target_health: float = None  # Attack: share of the target's health left from its bar this frame, None if no bar is showing
     facing: str = None  # Which way the character faces, left or right, None if unknown
+    kill_check: bool = False  # EXP Kill Check is on and EXP is being read: kills are told from EXP changing, not by waiting gone_delay
+    killed_at: float = None  # Grab time of the frame EXP last changed in, None if it hasn't
 
     def mobs_ahead(self):  # (distance, height) of the mobs on the target's side or overlapping the player, which an attack facing it can hit
         crowd = self.crowd if self.crowd else [(self.dx, self.dy)]
@@ -48,6 +51,7 @@ class Situation:  # One tick's view of the game, built from values set by calcul
 
     @classmethod
     def from_values(cls, now, attack_last_used, facing=None):
+        check = kills.instance
         state = values.debug_state
         if state == "Attack" and values.debug_mob is None or state == "Navigate" and values.debug_path is None:
             state = None  # The state is left over from an earlier tick
@@ -56,7 +60,7 @@ class Situation:  # One tick's view of the game, built from values set by calcul
         return cls(state=state, dx=values.debug_x_distance, dy=values.debug_y_distance, on_ladder=values.debug_on_ladder, route=values.debug_route,
                    randomizer=values.randomizer_active, speed=values.player_speed, now=now, attack_last_used=attack_last_used, target_seen=seen,
                    crowd=list(values.debug_crowd or []) if state == "Attack" else None,
-                   target_health=mob.health if state == "Attack" and mob is not None else None, facing=facing)
+                   facing=facing, kill_check=values.exp_check_active and check.usable(now), killed_at=check.changed_at)
 
 
 @dataclass
@@ -75,6 +79,8 @@ rope_run_jump = (20, 55)  # Distance from a rope at which to make a running jump
 jump_move_distance = 450  # With Random Behaviour on, walks farther than this from where they're heading hop along (jump held)
 hop_after = 0.4  # ... once walking the same way this long, at full speed: hopping from a standstill only jumps straight up
 hop_speed = 80  # ... and moving sideways at least this fast (px/s), when the movement tracker can tell
+jiggle_after = 1.0  # With Random Behaviour on, seconds without finding the player before walking a little back and forth, so the
+jiggle_step = 0.4  # nametag comes out from behind whatever covers it (mobs, effects); seconds each way
 nudge_zone = 20  # Within this distance of a spot to line up on (under a rope), tap the arrow instead of walking: walking overshoots
 reverse_delay = 0.3  # Seconds after walking one way before walking the other, so a frame or two of jitter can't flip the character
 rope_grab_time = 0.8  # Seconds after jumping at a rope to keep holding Up, not jump again: a second jump would leave the rope it caught
@@ -86,11 +92,12 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
     def __init__(self, profile: Profile):
         self.profile = profile
         self.last_target = None  # (time, dx, dy) of the last attack, to tell a new mob from the one being fought
-        self.seen_health = None  # Health last read from the bar of the mob being fought; kept while the bar is hidden for a frame
         self.last_walk = (None, 0)  # (direction, time) of the last walking action, for reverse_delay
         self.walk_since = (None, 0, 0)  # (direction, started, last step) of the current stretch of walking, for hop_after
         self.hopping = False  # Hopping in the current stretch of walking: jump stays held to its end, like a player holding the key
         self.rope_jump = -1e9  # When it last jumped at a rope, for rope_grab_time
+        self.lost_since = None  # When the player was last lost from view, for jiggle_after
+        self.jiggle_first = "left"  # Which way a jiggle starts, picked at random each time
 
     def same_target(self, s: Situation):  # Whether the target is the mob attacked last
         if self.last_target is None:
@@ -98,19 +105,13 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
         when, dx, dy = self.last_target
         return s.now - when <= new_target_gap and abs(s.dx - dx) <= new_target_shift and abs(s.dy - dy) <= new_target_shift
 
-    def track_health(self, s: Situation):  # Remembers the target's health from its bar, for picking attacks while the bar is hidden
-        if not self.same_target(s):
-            self.seen_health = None
-        if s.target_health is not None:
-            self.seen_health = s.target_health
-
     def new_target(self, s: Situation):  # Whether the target hasn't been hit yet, so an opener attack applies
-        return self.seen_health is None and not self.same_target(s)
+        return not self.same_target(s)
 
     def pick_attack(self, s: Situation, jumping=False):
         p = self.profile
         find = p.jump_attack_for if jumping else p.attack_for
-        return find(abs(s.dx), s.dy, s.attack_last_used, s.now, new_target=self.new_target(s), mobs=s.mobs_ahead(), health=self.seen_health)
+        return find(abs(s.dx), s.dy, s.attack_last_used, s.now, new_target=self.new_target(s), mobs=s.mobs_ahead())
 
     def decide(self, s: Situation) -> Action:
         action = self.choose(s)
@@ -122,28 +123,43 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
         return action
 
     def choose(self, s: Situation) -> Action:
+        if s.state != "Search":
+            self.lost_since = None
         if s.state == "Attack":
-            self.track_health(s)
             return self.fight(s)
         if s.state == "Navigate":
             return self.navigate(s)
         if s.state == "Search":  # The nametag is usually just covered for a moment: wait (pressing Up here used to grab ropes)
-            return Action("stop", label="player not found")
+            return self.search(s)
         return Action("wait", label="nothing")
+
+    def search(self, s: Situation) -> Action:  # Player not found: wait, then with Random Behaviour on, walk a little back and forth
+        if self.lost_since is None:
+            self.lost_since, self.jiggle_first = s.now, random.choice(("left", "right"))
+        lost = s.now - self.lost_since
+        if not s.randomizer or lost < jiggle_after:
+            return Action("stop", label="player not found")
+        turned = int((lost - jiggle_after) / jiggle_step) % 2
+        direction = self.jiggle_first if not turned else ("right" if self.jiggle_first == "left" else "left")
+        return Action("move", direction, label="player not found: jiggling")
 
     def fight(self, s: Situation) -> Action:
         raise NotImplementedError
 
-    def strike(self, s: Situation, kind, attack, label):  # Judges the target on frames grabbed after the last hit landed. A bar shows it's
-        # alive: attack again right away. No bar: watch gone_delay longer, and attack only if it's still there (a dead mob fades out)
+    def strike(self, s: Situation, kind, attack, label):  # After an attack, waits for its hit to land, then checks the mob is alive
+        # before attacking again: with EXP Kill Check, from EXP not going up; otherwise by gone_delay passing with the mob still seen (a
+        # dead one fades out, but slowly)
         last = self.profile.attack_named(s.last_attack_name) if s.last_attack_name else None
         if last is not None:
             landed = s.last_attack + last.hit_time
             seen = s.target_seen if s.target_seen is not None else s.now
-            if seen < landed:  # Stop, not wait, while holding off: wait would leave a held arrow key walking into the mob
+            killed = s.kill_check and s.killed_at is not None and s.killed_at > s.last_attack
+            if killed and self.same_target(s):  # Still its box until calculations leave it out (process/kills.py)
+                return Action("stop", label="killed: moving on")
+            if not killed and seen < landed:  # Stop, not wait, while holding off: wait would leave a held arrow key walking into the mob
                 return Action("stop", label="waiting for the hit to land")
-            if s.target_health is None and seen < landed + self.profile.gone_delay:
-                return Action("stop", label="no bar: checking the mob is gone")
+            if not killed and seen < landed + (kills.exp_wait if s.kill_check else self.profile.gone_delay):
+                return Action("stop", label="checking EXP" if s.kill_check else "checking the mob is gone")
         self.last_target = (s.now, s.dx, s.dy)
         direction = s.direction if s.dx != 0 else None  # Overlapping the character: keep facing as is, or it turns back and forth over it
         mobbing = [a for a in self.profile.attacks if a.min_mobs > 1]

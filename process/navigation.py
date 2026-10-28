@@ -11,7 +11,6 @@ ladder_align = 20  # How far the player's centre may be from a rope's before jum
 on_ladder_x = 20  # How far the player's centre may be from a rope's while hanging on it (the tracker takes a moment to say so)
 height_weight = 3  # When picking a target, height difference counts this many times more than horizontal distance (prefer the same level)
 clump_bonus = 40  # When picking a target, each other mob in the same direction and within clump range counts as this much closer
-hurt_bonus = 150  # When picking a target, a mob with its health bar showing (already hit) counts as this much closer: finish it first
 stick_bonus = 40  # When picking a target, the one picked last counts as this much closer, so two similar mobs don't swap every frame
 stick_distance = 40  # How far the last target may have moved (knockback, box jitter) and still be the one picked last
 size_weight = 0.5  # When picking a target, each pixel of width beyond typical_width counts as this much closer (negative: prefer smaller)
@@ -32,11 +31,13 @@ class Plan:
     goal: object = None  # Mob the route leads towards
 
 
-def plan(player, instances, jump_height, clump_range=150, previous=None, explore=None, standing=None, on_rope=False, skip=()):  # player: a
+def plan(player, instances, jump_height, clump_range=150, previous=None, explore=None, standing=None, on_rope=False, skip=(),
+         router=None):  # player: a
     # Rect, None when the player can't be found. clump_range: how far in front the widest-hitting attack reaches, for preferring
     # bunched-up mobs; previous: the last plan's target; explore: "up" or "down" to look for mobs on other platforms when none are in
     # sight; standing / on_rope: what the movement tracker says the player is doing (on the ground / hanging on a rope); skip: platforms
-    # not to jump for, as jumps at them kept failing
+    # not to jump for, as jumps at them kept failing; router: router(goal) gives the first step of a route across the recorded map
+    # to the goal mob's platform (to a platform worth exploring with goal None), or None without one: see Step
     if player is None:
         return Plan("Search")
     platforms = rects.find_platform_instances(instances)
@@ -56,7 +57,13 @@ def plan(player, instances, jump_height, clump_range=150, previous=None, explore
 
     goal = pick_target(mobs, player, 0)  # Nearest mob elsewhere, which the route heads for
     if goal is None:
+        step = router(None) if router is not None and explore is not None else None
+        if step is not None:  # A route to the nearest platform worth looking on
+            return step_plan(player, step, platform, None)
         return explore_plan(instances, platforms, player, platform, jump_height, explore, skip)
+    step = router(goal) if router is not None else None
+    if step is not None:  # A route across the recorded map: follow its first step (the local guesses below see only one hop)
+        return step_plan(player, step, platform, goal)
     if goal.y2 > player.y2 + feet_margin:  # Lower down: drop
         below = find_platform_below(platforms, player, goal)
         if below is not None:
@@ -67,6 +74,28 @@ def plan(player, instances, jump_height, clump_range=150, previous=None, explore
         if path is not None:
             return up_plan(player, path, platform, goal)
     return Plan("Navigate", goal, route="walk", dx=goal.center_x - player.center_x, platform=platform, goal=goal)
+
+
+@dataclass
+class Step:  # The first step of a route across the recorded map, in screen coords
+    kind: str  # walk (on to the next piece of this platform), drop (onto target), jump (onto target, up or across) or rope (climb target,
+    # a Ladder)
+    target: object  # The platform (PlatformLine) or rope (Ladder Rect) it leads to
+    x1: float = 0  # drop: where on the current platform to drop from
+    x2: float = 0
+
+
+def step_plan(player, step, platform, goal):  # Turns a route's step into the moves the bot already has
+    if step.kind == "walk":
+        return Plan("Navigate", step.target, route="walk", dx=step.x1 - player.center_x, platform=platform, goal=goal)
+    if step.kind == "drop":
+        x = player.center_x
+        left, right = step.x1 + drop_margin, step.x2 - drop_margin
+        if left > right:  # Narrow: its middle
+            left = right = (step.x1 + step.x2) / 2
+        dx = 0 if left <= x <= right else (left - x if x < left else right - x)
+        return Plan("Navigate", step.target, route="down", dx=dx, dy=player.y2 - step.target.top_at(x + dx), platform=platform, goal=goal)
+    return up_plan(player, step.target, platform, goal)  # A jump or a rope
 
 
 def explore_plan(instances, platforms, player, platform, jump_height, direction, skip=()):  # No mobs in sight. Exploring, head for the
@@ -114,8 +143,7 @@ def near_edge_dx(mob, player):  # Horizontal distance to the mob's nearer edge, 
     return 0 if abs(dx) <= (mob.x2 - mob.x1) / 2 else dx - (mob.x2 - mob.x1) / 2 * (1 if dx > 0 else -1)
 
 
-def pick_target(mobs, player, clump_range, previous=None):  # The closest mob (to its nearer edge), favouring the same level, mobs
-    # already hurt, the direction with more mobs bunched up, and the target picked last. Returns the nearest mob that way, as that's
+def pick_target(mobs, player, clump_range, previous=None):  # The closest mob (to its nearer edge), favouring the same level, the direction with more mobs bunched up, and the target picked last. Returns the nearest mob that way, as that's
     # the one an attack aimed that way hits first
     def ahead(m):  # Mobs on the same side as m and at its level
         dx = m.center_x - player.center_x
@@ -123,9 +151,8 @@ def pick_target(mobs, player, clump_range, previous=None):  # The closest mob (t
 
     def score(m):
         bunched = sum(1 for o in ahead(m) if abs(o.center_x - player.center_x) <= clump_range) - 1 if clump_range > 0 else 0
-        hurt = m.health is not None
         kept = previous is not None and abs(m.center_x - previous.center_x) <= stick_distance and abs(m.y2 - previous.y2) <= stick_distance
-        return (abs(near_edge_dx(m, player)) + height_weight * abs(m.y2 - player.y2) - clump_bonus * max(bunched, 0) - hurt_bonus * hurt
+        return (abs(near_edge_dx(m, player)) + height_weight * abs(m.y2 - player.y2) - clump_bonus * max(bunched, 0)
                 - stick_bonus * kept - size_weight * ((m.x2 - m.x1) - typical_width))
 
     if not mobs:

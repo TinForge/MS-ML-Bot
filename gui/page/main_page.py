@@ -1,5 +1,6 @@
 # GUI layout for main page
 
+import time
 from tkinter import *
 from tkinter.ttk import *
 
@@ -53,11 +54,16 @@ def main():
     window.instance.switch_page(MainPage)
 
     # -------------------------------------------
+    frame = 1 / max(config.gui_fps, 1)  # Panels and the overlay update this often; faster only takes CPU time from the bot's threads
     while window.instance is not None:
+        started = time.perf_counter()
         values.update()
         window.instance.refresh()
         window.instance.tk.update_idletasks()
         window.instance.tk.update()
+        rest = frame - (time.perf_counter() - started)
+        if rest > 0 and window.instance is not None:
+            time.sleep(rest)
     # -------------------------------------------
 
 

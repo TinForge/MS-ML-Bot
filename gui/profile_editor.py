@@ -34,7 +34,6 @@ ATTACK_FIELDS = [
     ("range_y", "Range y: min, max", "pair", [-30, 25]),
     ("hit_time", "Hit time (s)", "float", 0.35),
     ("cooldown", "Cooldown (s)", "float", 0),
-    ("min_health", "Min target health (0-1)", "float", 0),
     ("min_mobs", "Min mobs in reach", "int", 1),
     ("hit_range", "Hit range (blank: range x max)", "optional_int", None),
     ("opener", "First hit only", "bool", False),

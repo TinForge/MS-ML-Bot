@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from tools import screen
+
 title = cv2.cvtColor(np.asarray(Image.open("resources/minimap title.png").convert("RGB")), cv2.COLOR_RGB2GRAY)  # "MINI MAP" strip, same in every map
 title_tolerance = 20  # Summed squared grey difference allowed per pixel when matching the title strip
 player_sprite = np.asarray(Image.open("resources/minimap player.png"))  # Yellow dot in a dark ring; alpha marks the dot's own pixels
@@ -125,19 +127,19 @@ def read_name(rgb, title_pos, map_rect):  # Map name text pixels and an id made 
     return hashlib.sha1(np.packbits(text).tobytes() + bytes(text.shape)).hexdigest()[:12], text
 
 
-def read(im, last_title=None):  # Minimap from a game area image, and where its title was (for the next call); None if not shown
-    if last_title is not None:  # Usually still there: only convert the area around it
+def read(im, last_title=None):  # Minimap from a game area frame, and where its title was (for the next call); None if not shown
+    rgb = screen.pixels(im)
+    if last_title is not None:  # Usually still there: only look around it
         x, y = last_title
         ox, oy = max(0, x - search_margin), max(0, y - search_margin)
-        region = im.crop((ox, oy, min(im.width, x + window_size[0]), min(im.height, y + window_size[1])))
+        region = rgb[oy:min(rgb.shape[0], y + window_size[1]), ox:min(rgb.shape[1], x + window_size[0])]
         result = read_region(region, (x - ox, y - oy), (ox, oy))
         if result[1] is not None:
             return result
-    return read_region(im, None, (0, 0))
+    return read_region(rgb, None, (0, 0))
 
 
-def read_region(im, near, offset):  # Like read, on part of the frame starting at offset
-    rgb = np.asarray(im)
+def read_region(rgb, near, offset):  # Like read, on part of the frame (an RGB array) starting at offset
     title_pos = find_title(cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY), near, full_search=near is None)  # A cropped region may not hold a window found elsewhere
     if title_pos is None:
         return None, None

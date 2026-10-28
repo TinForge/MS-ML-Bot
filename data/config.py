@@ -10,10 +10,11 @@ DEFAULTS = {
     "detection": {"stats_interval": 0.25, "player_interval": 0.05, "model_imgsz": 960},
     "player": {"search_margin": (120, 80), "character_size": (50, 66), "nametag_tolerance": 0.05},
     "potion": {"cooldown": 3.0, "confirm_reads": 2},
-    "display": {"window_width": 390, "drop_display_time": 1.5, "potion_display_time": 1.5},
+    "display": {"window_width": 390, "drop_display_time": 1.5, "potion_display_time": 1.5, "gui_fps": 30},
     "frame_times": {"smoothing": 0.1, "stale_time": 1.0},
     "input": {"press_time": (0.07, 0.12), "press_gap": (0.05, 0.12), "hold_jitter": 0.1},
     "movement": {"explore_delay": 3.0},
+    "kills": {"exp_wait": 0.1, "dead_time": 1.2},
 }
 
 
@@ -66,9 +67,12 @@ potion_confirm_reads = settings["potion"]["confirm_reads"]
 window_width = settings["display"]["window_width"]
 drop_display_time = settings["display"]["drop_display_time"]
 potion_display_time = settings["display"]["potion_display_time"]
+gui_fps = settings["display"]["gui_fps"]
 timing_smoothing = settings["frame_times"]["smoothing"]
 timing_stale_time = settings["frame_times"]["stale_time"]
 press_time = settings["input"]["press_time"]
 press_gap = settings["input"]["press_gap"]
 hold_jitter = settings["input"]["hold_jitter"]
 explore_delay = settings["movement"]["explore_delay"]
+exp_wait = settings["kills"]["exp_wait"]
+dead_time = settings["kills"]["dead_time"]

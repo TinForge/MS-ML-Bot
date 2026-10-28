@@ -16,7 +16,12 @@ from tools.camera import CameraTracker
 folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps")  # maps/<map id>/platforms.json
 
 bin_size = 4  # Ground is recorded in columns this many pixels wide
-merge_height = 6  # Ground points within this height in a column are the same platform
+merge_height = 10  # A new ground reading within this height of one already in its column is the same ground
+duplicate_height = 30  # A piece lying this close along a longer platform is the same ground recorded twice (see without_duplicates):
+# real platforms that overlap are at least a character's height apart (~60 px), or nothing could stand on the lower one
+duplicate_share = 0.5  # ... over at least this share of its width
+consolidate_height = 12  # Ground heights in a column this close are merged: they drift together as readings average out (the ones
+# seen were 6-11 px apart). Kept small: where a stair step ends, one column can hold both steps' heights ~20 px apart
 min_line_samples = 3  # Samples a platform line needs, so a stray reading never becomes a platform but one walk along it does
 min_line_width = 24  # Narrowest platform kept: real ones are far wider, slivers this thin were recorded while hanging on a rope
 max_gap = 3  # Empty columns a platform line may jump over (unrecorded bits, not real gaps)
@@ -34,6 +39,46 @@ safe_share = 0.01  # Share of the watched time with mobs on it below which groun
 busy_share = 0.1  # ... and above which it's busy (a spawn area); occasional in between
 safety_interval = 2.0  # Seconds between working out the safety of each stretch again
 SAFE, OCCASIONAL, BUSY, UNKNOWN = "safe", "occasional", "busy", "unknown"
+
+
+def without_duplicates(lines):  # Drops pieces that lie along a longer platform, within duplicate_height of it, over at least
+    # duplicate_share of their width: the same ground recorded twice. Stair steps only touch at an end, so they stay
+    by_width = sorted(lines, key=lambda l: l[-1][0] - l[0][0], reverse=True)
+    kept = []
+    for line in by_width:
+        xs, ys = [p[0] for p in line], [p[1] for p in line]
+        width = max(xs[-1] - xs[0], bin_size)
+        duplicate = False
+        for other in kept:
+            ox, oy = [p[0] for p in other], [p[1] for p in other]
+            x1, x2 = max(xs[0], ox[0]), min(xs[-1], ox[-1])
+            if x2 - x1 < duplicate_share * width:
+                continue
+            sample = np.linspace(x1, x2, 8)
+            if np.abs(np.interp(sample, xs, ys) - np.interp(sample, ox, oy)).max() <= duplicate_height:
+                duplicate = True
+                break
+        if not duplicate:
+            kept.append(line)
+    return [line for line in lines if any(line is k for k in kept)]  # In the order they were found
+
+
+def consolidate(column):  # Merges ground heights in a column that are within consolidate_height: one ground recorded twice.
+    # Heights are averaged by how often each was stood on, mob time added up, watched time kept (both were on screen together).
+    # Returns whether anything merged
+    merged = False
+    column.sort(key=lambda c: c[0])
+    i = 0
+    while i < len(column) - 1:
+        a, b = column[i], column[i + 1]
+        if b[0] - a[0] <= consolidate_height:
+            stood = a[1] + b[1]
+            column[i] = [(a[0] * a[1] + b[0] * b[1]) / stood, stood, a[2] + b[2], max(a[3], b[3])]
+            del column[i + 1]
+            merged = True
+        else:
+            i += 1
+    return merged
 
 
 class Calibration:  # Relates camera coords (reset each session) to map coords: game pixels lined up with the minimap
@@ -97,11 +142,11 @@ class PlatformMap:  # Ground and ladders recorded on one map
 
     def add_ground(self, x, y):
         column = self.ground.setdefault(int(x // bin_size), [])
-        for cluster in column:
-            if abs(cluster[0] - y) <= merge_height:
-                cluster[0] += (y - cluster[0]) / (cluster[1] + 1)
-                cluster[1] += 1
-                break
+        cluster = min(column, key=lambda c: abs(c[0] - y), default=None)
+        if cluster is not None and abs(cluster[0] - y) <= merge_height:  # The nearest, not just the first close enough
+            cluster[0] += (y - cluster[0]) / (cluster[1] + 1)
+            cluster[1] += 1
+            consolidate(column)
         else:
             column.append([y, 1, 0.0, 0.0])
         self.dirty = True
@@ -126,6 +171,19 @@ class PlatformMap:  # Ground and ladders recorded on one map
             return UNKNOWN
         share = cluster[2] / cluster[3]
         return SAFE if share < safe_share else OCCASIONAL if share < busy_share else BUSY
+
+    def activity(self, line):  # (seconds with mobs on it, seconds watched) per column, on average along a platform line, for where to
+        # go looking (the same per-column measure as safety_at)
+        mobs = watched = 0.0
+        columns = 0
+        xs, ys = [p[0] for p in line], [p[1] for p in line]
+        for b in range(int(xs[0] // bin_size), int(xs[-1] // bin_size) + 1):  # Every column along it (the line keeps only its corners)
+            y = float(np.interp((b + 0.5) * bin_size, xs, ys))
+            cluster = min(self.ground.get(b, ()), key=lambda c: abs(c[0] - y), default=None)
+            columns += 1
+            if cluster is not None and abs(cluster[0] - y) <= merge_height:
+                mobs, watched = mobs + cluster[2], watched + cluster[3]
+        return (mobs / columns, watched / columns) if columns else (0.0, 0.0)
 
     def safety_runs(self, lines):  # Each platform line split into runs of the same safety: [(safety, [(x, y), ...]), ...]
         runs = []
@@ -187,7 +245,7 @@ class PlatformMap:  # Ground and ladders recorded on one map
             if len(xy) == 1:
                 xy = np.array([[xy[0][0] - bin_size / 2, xy[0][1]], [xy[0][0] + bin_size / 2, xy[0][1]]], dtype=np.float32)
             lines.append([tuple(p) for p in cv2.approxPolyDP(xy.reshape(-1, 1, 2), 1.5, False).reshape(-1, 2)])
-        return lines
+        return without_duplicates(lines)
 
     def on_ladder(self, x, y):  # Whether map (x, y) is part-way up a recorded rope (not at its top or bottom)
         return any(abs(ladder["x"] - x) <= ladder_merge and ladder["top"] + merge_height < y < ladder["bottom"] - merge_height
@@ -203,6 +261,9 @@ class PlatformMap:  # Ground and ladders recorded on one map
     def from_json(cls, data):
         m = cls()
         m.ground = {int(b): [list(c) + [0.0] * (4 - len(c)) for c in column] for b, column in data.get("ground", {}).items()}  # Older files: no mob statistics
+        for column in m.ground.values():  # Recordings made before heights were merged
+            if consolidate(column):
+                m.dirty = True
         m.ladders = [dict(ladder) for ladder in data.get("ladders", [])]
         return m
 

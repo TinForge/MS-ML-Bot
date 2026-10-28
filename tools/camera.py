@@ -3,6 +3,8 @@
 import cv2
 import numpy as np
 
+from tools import screen
+
 region = (0.2, 0.1, 0.8, 0.84)  # Part of the game area used (x1, y1, x2, y2 as fractions), away from the minimap, quest helper, chat and status bar
 scale = 0.5  # Frames are compared at half size, which is faster and still precise to about a pixel
 min_response = 0.08  # Below this, the shift is too uncertain to trust (e.g. the view changed completely)
@@ -20,11 +22,12 @@ class CameraTracker:
         self.position = (0.0, 0.0)
         self.lost = False
 
-    def update(self, frame):  # frame: PIL image of the game area; returns the camera shift in game pixels, or None
-        w, h = frame.size
+    def update(self, frame):  # frame: the game area (RGB array); returns the camera shift in game pixels, or None
+        rgb = screen.pixels(frame)
+        h, w = rgb.shape[:2]
         x1, y1, x2, y2 = int(w * region[0]), int(h * region[1]), int(w * region[2]), int(h * region[3])
         size = (int((x2 - x1) * scale), int((y2 - y1) * scale))
-        grey = np.asarray(frame.crop((x1, y1, x2, y2)).convert("L").resize(size), dtype=np.float32)
+        grey = cv2.resize(cv2.cvtColor(rgb[y1:y2, x1:x2], cv2.COLOR_RGB2GRAY), size, interpolation=cv2.INTER_AREA).astype(np.float32)
         previous, self.previous = self.previous, grey
         if previous is None or previous.shape != grey.shape:  # First frame, or the game area changed size
             self.lost = previous is not None

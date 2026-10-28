@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import references
+from gui.widgets import update
 from data import config, values
 from tools import keyboard
 from tools.persistent import save_data
@@ -63,6 +64,13 @@ class StatsPanel(LabelFrame):
         self.mp_drop.grid(sticky=E, row=2, column=2, padx=2, pady=5)
         self.add_potion_inputs(2, "mp", save_data.mp_potion_threshold, save_data.mp_potion_key)
         #
+        Label(self, text="EXP").grid(sticky=W, row=3, column=0, padx=(10, 5), pady=5)
+        self.exp_text = Label(self)
+        self.exp_text.grid(sticky=W, row=3, column=1, pady=5)
+        self.exp_gain = Label(self, foreground="green", width=drop_width, anchor=E)  # Each gain, which EXP Kill Check takes for a kill
+        self.exp_gain.grid(sticky=E, row=3, column=2, padx=2, pady=5)
+        self.exp_last, self.exp_gained, self.exp_gain_time = None, 0, 0
+        #
         self.grid_columnconfigure(1, weight=1)
         self.pack(fill=X)
 
@@ -91,10 +99,20 @@ class StatsPanel(LabelFrame):
     def refresh(self):
         self.refresh_stat("HP", values.player_hp, self.hp_tracker, self.hp_text, self.hp_drop)
         self.refresh_stat("MP", values.player_mp, self.mp_tracker, self.mp_text, self.mp_drop)
+        self.refresh_exp(values.player_exp)
+
+    def refresh_exp(self, value):
+        update(self.exp_text, text="%d (%.2f%%)" % value if value is not None else "?")
+        if value is not None:
+            if self.exp_last is not None and value[0] > self.exp_last:
+                self.exp_gained, self.exp_gain_time = value[0] - self.exp_last, time.time()
+            self.exp_last = value[0]
+        shown = time.time() - self.exp_gain_time < drop_display_time
+        update(self.exp_gain, text="▲ %d" % self.exp_gained if shown else "")
 
     def refresh_stat(self, stat, value, tracker, text, drop):
         tracker.update(value)
-        text.configure(text="%d/%d" % value if value is not None else "?")
+        update(text, text="%d/%d" % value if value is not None else "?")
         amount = tracker.visible_drop()
         potion_used = time.time() - values.last_potion_time[stat] < potion_display_time
-        drop.configure(text="▼ %d" % amount if amount > 0 else "", image=references.green_icon if potion_used else "")  # Green dot for a moment after a potion
+        update(drop, text="▼ %d" % amount if amount > 0 else "", image=references.green_icon if potion_used else "")  # Green dot for a moment after a potion

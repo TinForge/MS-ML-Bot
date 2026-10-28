@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter.ttk import *
 
 from gui import profile_editor, references
+from gui.widgets import update
 from data import values, profiles
 from process import bot
 from tools.persistent import save_data
@@ -49,6 +50,11 @@ class BotPanel(LabelFrame):
         Label(self, text="Random Behaviour", font=references.var_font).grid(sticky=W, row=5, column=1, padx=0, pady=0)
         Button(self, text="Toggle", command=lambda: self.toggle_random_behaviour()).grid(sticky=E, row=5, column=2, padx=0, pady=0)
         #
+        self.exp_check = Label(self, image=references.red_icon)
+        self.exp_check.grid(row=6, column=0, padx=15, pady=5)
+        Label(self, text="EXP Kill Check", font=references.var_font).grid(sticky=W, row=6, column=1, padx=0, pady=0)
+        Button(self, text="Toggle", command=lambda: self.toggle_exp_check()).grid(sticky=E, row=6, column=2, padx=0, pady=0)
+        #
         self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
 
@@ -78,20 +84,24 @@ class BotPanel(LabelFrame):
     def toggle_potion(self):
         values.potion_active = not values.potion_active
 
+    def toggle_exp_check(self):  # Kills told from EXP going up; off: by waiting the profile's gone_delay for the mob to fade
+        values.exp_check_active = not values.exp_check_active
+
     def toggle_human_input(self):  # Randomised, person-like key timing; off: exact, instant presses (more responsive)
         values.human_input = not values.human_input
 
     def refresh(self):
         if values.bot_profile_error is not None:
-            self.profile_info.configure(text=values.bot_profile_error, foreground="red")
+            update(self.profile_info, text=values.bot_profile_error, foreground="red")
         elif bot.instance is not None and bot.instance.profile is not None:
-            self.profile_info.configure(text=bot.instance.profile.description, foreground="gray")
+            update(self.profile_info, text=bot.instance.profile.description, foreground="gray")
         else:
-            self.profile_info.configure(text="No profiles in profiles/" if not self.profile_picker["values"] else "", foreground="gray")
-        self.looting_active.configure(image=self.status_icon(values.looting_active, values.bot_active))
-        self.random_behaviour.configure(image=self.status_icon(values.randomizer_active, values.bot_active))
-        self.potion_active.configure(image=self.status_icon(values.potion_active, True))  # Works without botting
-        self.human_input.configure(image=self.status_icon(values.human_input, values.bot_active))
+            update(self.profile_info, text="No profiles in profiles/" if not self.profile_picker["values"] else "", foreground="gray")
+        update(self.looting_active, image=self.status_icon(values.looting_active, values.bot_active))
+        update(self.random_behaviour, image=self.status_icon(values.randomizer_active, values.bot_active))
+        update(self.potion_active, image=self.status_icon(values.potion_active, True))  # Works without botting
+        update(self.human_input, image=self.status_icon(values.human_input, values.bot_active))
+        update(self.exp_check, image=self.status_icon(values.exp_check_active, values.bot_active))
 
     def status_icon(self, enabled, running):  # Yellow when enabled but waiting on the Botting process
         if not enabled:
