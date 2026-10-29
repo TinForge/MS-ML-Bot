@@ -16,10 +16,12 @@ step_match = 0.6  # Fraction of pixels that must match the previous view; the mi
 picture_match = 0.4  # Same, against the saved picture (used after a jump or when a session starts), which holds an older background
 picture_lead = 0.15  # ... and the best position must match that much better than any other, so a lookalike isn't taken
 save_interval = 5.0  # Seconds between saves while the picture keeps growing
+restart_after = 5.0  # Seconds the view can't be found in the saved picture before a map with nothing recorded on it starts a new one: on
+# maps of repeating platforms seen through a see-through minimap, the saved picture can match several places equally
 
 
 class Mosaic:  # The stitched minimap of one map
-    def __init__(self, map_id):
+    def __init__(self, map_id, load=True):
         self.map_id = map_id
         self.image = None  # RGB picture of everything seen so far
         self.known = None  # Bool mask of pixels seen so far
@@ -28,7 +30,9 @@ class Mosaic:  # The stitched minimap of one map
         self.previous = None  # Last view (grey) and its moving-marker mask
         self.dirty = False
         self.last_save = 0
-        self.load()
+        self.unplaced_since = None  # When the views started failing to be placed in the saved picture, this session
+        if load:
+            self.load()
 
     def path(self, name):
         return os.path.join(folder, self.map_id, name)
@@ -57,7 +61,10 @@ class Mosaic:  # The stitched minimap of one map
         else:
             pos = self.locate(view, moving)
             if pos is None:
+                if self.unplaced_since is None:
+                    self.unplaced_since = time.time()
                 return None
+        self.unplaced_since = None
         pos = self.grow(pos, view.shape[:2])
         self.last = pos
         self.previous = (cv2.cvtColor(np.ascontiguousarray(view), cv2.COLOR_RGB2GRAY), moving)
@@ -88,6 +95,7 @@ class Mosaic:  # The stitched minimap of one map
         grey[~self.known] = 0
         loc = self.match(grey, patch, mask, picture_match, picture_lead)
         return None if loc is None else (loc[0] - mx, loc[1] - my)
+
 
     @staticmethod
     def match(grey, patch, mask, min_match, lead=None):  # Best position of patch in grey, if enough of its pixels match there
@@ -129,7 +137,8 @@ class Tracker:  # Keeps one mosaic per map and fills in each minimap reading's p
     def __init__(self):
         self.mosaic = None
 
-    def update(self, minimap):
+    def update(self, minimap, restart_ok=False):  # restart_ok: nothing is recorded in this map's coords, so its saved picture can be
+        # replaced when it can't be matched (see restart_after)
         if minimap is None or minimap.map_id is None:
             return
         if self.mosaic is None or self.mosaic.map_id != minimap.map_id:  # Changed map: keep what was seen of the old one
@@ -137,6 +146,11 @@ class Tracker:  # Keeps one mosaic per map and fills in each minimap reading's p
                 self.mosaic.save()
             self.mosaic = Mosaic(minimap.map_id)
         view_pos = self.mosaic.update(minimap.area, minimap.markers)
+        stuck = self.mosaic.unplaced_since
+        if view_pos is None and restart_ok and self.mosaic.last is None and stuck is not None and time.time() - stuck >= restart_after:
+            print("Minimap: this view isn't in the saved picture of the map, starting it again")
+            self.mosaic = Mosaic(minimap.map_id, load=False)
+            view_pos = self.mosaic.update(minimap.area, minimap.markers)
         if view_pos is not None and minimap.player is not None:
             minimap.position = (view_pos[0] + minimap.player[0], view_pos[1] + minimap.player[1])
 

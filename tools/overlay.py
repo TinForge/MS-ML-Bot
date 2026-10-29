@@ -3,10 +3,16 @@
 from tkinter import *
 from tkinter import Canvas
 import ctypes
+import time
 from gui import window
-from data import rects
+from data import config, rects
+from tools import map_recorder
 
 WDA_EXCLUDEFROMCAPTURE = 0x11  # Keeps the overlay out of screen captures, so detection never sees its own drawings
+
+
+def drawing_time():  # When drawn: map overlays are drawn ahead to then (config overlay_prediction), else as of their frame
+    return time.time() if config.overlay_prediction else None
 
 
 class Overlay:
@@ -73,22 +79,27 @@ class Overlay:
             self.shapes.add(self.canvas.create_oval(px - 8, py - 8, px + 8, py + 8, fill='', outline='cyan', width=thickness))
         self.canvas.pack()
 
-    def render_platforms(self, mapper, frame_rect):  # Recorded platforms coloured by how safe from mobs they are, ladders (always
-        # safe: mobs don't climb) and the player's feet, from map coords. Orange: not watched long enough to tell yet
+    def render_platforms(self, mapper, frame_rect, erasing=False):  # Recorded platforms coloured by how safe from mobs they are,
+        # ladders (always safe: mobs don't climb) and the player's feet, from map coords. Orange: not watched long enough to tell yet.
+        # erasing: also the area around the feet that Erase removes
         colors = {"safe": "#30e040", "occasional": "yellow", "busy": "red", "unknown": "orange"}
+        now = drawing_time()
         for safety, line in mapper.safety or [("unknown", line) for line in mapper.lines]:
-            points = [mapper.to_screen(p, frame_rect) for p in line]
+            points = [mapper.to_screen(p, frame_rect, now) for p in line]
             if None not in points and len(points) >= 2:
                 self.shapes.add(self.canvas.create_line(*[c for p in points for c in p], fill=colors[safety], width=3))
         for ladder in mapper.ladders:
-            top, bottom = mapper.to_screen((ladder["x"], ladder["top"]), frame_rect), mapper.to_screen((ladder["x"], ladder["bottom"]), frame_rect)
+            top, bottom = mapper.to_screen((ladder["x"], ladder["top"]), frame_rect, now), mapper.to_screen((ladder["x"], ladder["bottom"]), frame_rect, now)
             if top is not None and bottom is not None:
                 self.shapes.add(self.canvas.create_line(*top, *bottom, fill=colors["safe"], width=3, dash=(6, 2)))
         feet = mapper.feet
-        point = mapper.to_screen(feet, frame_rect) if feet is not None else None
+        point = mapper.to_screen(feet, frame_rect) if feet is not None else None  # Not drawn ahead: the player moves with the camera
         if point is not None:
             x, y = point
             self.shapes.add(self.canvas.create_oval(x - 5, y - 5, x + 5, y + 5, fill='red', outline='white'))
+            if erasing:
+                w, h = map_recorder.erase_width, map_recorder.erase_height
+                self.shapes.add(self.canvas.create_rectangle(x - w, y - h, x + w, y + h, outline='red', width=2, dash=(4, 2)))
         self.canvas.pack()
 
     def render_attack_ranges(self, player_rect, attacks):  # Each attack's reach around the player, on both sides. Solid: where a mob's
@@ -113,7 +124,9 @@ class Overlay:
 
     def render_route(self, mapper, frame_rect, points):  # The route being followed: a line from the feet through each hop to where it
         # ends, a dot where each hop is taken, and an arrow at the end
-        screen = [mapper.to_screen(p, frame_rect) for p in points]
+        now = drawing_time()
+        screen = [mapper.to_screen(p, frame_rect, None if i == 0 else now) for i, p in enumerate(points)]  # Starts at the feet: like
+        # their dot, not drawn ahead
         if None in screen:
             return
         screen = [p for i, p in enumerate(screen) if i == 0 or abs(p[0] - screen[i - 1][0]) + abs(p[1] - screen[i - 1][1]) > 1]  # The

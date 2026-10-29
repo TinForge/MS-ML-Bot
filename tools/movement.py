@@ -13,6 +13,8 @@ max_acceleration = 700  # px/s² of vertical acceleration allowed; gravity (~200
 max_slope = 1.0  # Steepest slope walked on, as height per width
 ladder_drift = 15  # px/s of sideways speed allowed while climbing
 climb_speed = 30  # px/s of vertical speed that counts as climbing rather than standing
+max_climb_speed = 250  # px/s: climbing is about 100. Faster is falling at full speed (~670), which no longer speeds up, so it has no
+# gravity to tell it by: taken for a climb, a long drop recorded a rope where there's none
 
 
 class MovementState:
@@ -53,6 +55,8 @@ class MovementState:
             return AIR
         vx, vy = np.polyfit(t, x, 1)[0], np.polyfit(t, y, 1)[0]
         self.vx = float(vx)
+        if abs(vy) > max_climb_speed:
+            return AIR
         if abs(vx) < ladder_drift and abs(vy) >= climb_speed:
             return LADDER
         if self.state == LADDER and abs(vx) < ladder_drift:  # Climbing slowly or easing to a stop is still on the rope: only stepping

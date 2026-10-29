@@ -15,6 +15,7 @@ drop_time = 0.7  # Seconds for a drop: down-jump, fall, land
 jump_time = 0.9  # Seconds for a jump up or across: lining up, jumping, landing
 rope_time = 0.8  # Seconds getting onto a rope and off at the top, besides climbing
 jump_reach = 60  # How far past a platform's end a jump reaches sideways
+fall_reach = 60  # How far past a platform's end lower ground makes that end a ledge (a knockback over it lands there)
 rope_x = 12  # How far from a rope's line it can be grabbed from
 rope_edge = 40  # Ropes usually hang just past a platform's edge: platforms ending this close beside one count as at its ends
 walk_gap = 24  # Platform pieces whose ends are this close, at about the same height, are one platform recorded in pieces
@@ -96,6 +97,19 @@ class RoutePlanner:
     def width(self, a):  # Width of the whole platform a is a piece of
         pieces = [self.lines[i] for i in range(len(self.lines)) if self.group[i] == self.group[a]]
         return max(p[-1][0] for p in pieces) - min(p[0][0] for p in pieces)
+
+    def ledges(self, a, x):  # Distances from map x to the ends of the platform a is a piece of, (left, right), each None where the
+        # end isn't a ledge: no lower ground recorded just past it, as at a wall or the bottom of the map
+        pieces = [i for i in range(len(self.lines)) if self.group[i] == self.group[a]]
+        lx, ly = min((self.lines[i][0] for i in pieces), key=lambda p: p[0])
+        rx, ry = max((self.lines[i][-1] for i in pieces), key=lambda p: p[0])
+        return (x - lx if self.ground_below(lx, ly, -1) else None, rx - x if self.ground_below(rx, ry, 1) else None)
+
+    def ground_below(self, x, y, side):  # Whether a platform lower than y lies within fall_reach past x (side -1: left, 1: right)
+        past = (self.grid - x) * side
+        within = (past > 0) & (past <= fall_reach)
+        with np.errstate(invalid="ignore"):
+            return bool((self.tops[:, within] > y + stand_margin).any())
 
     def add_drops(self, a):  # Dropping from a lands on the highest platform below it there
         here = self.tops[a]

@@ -86,6 +86,24 @@ class MosaicTests(unittest.TestCase):
         _, positions = self.track([(110, 62)], tracker)
         self.assertEqual(positions[0], (DOT[0] - 100 + 0.5, DOT[1] - 60 + 0.5))
 
+    def test_saved_picture_that_cant_be_matched_starts_again(self):  # Only on a map with nothing recorded in its coords
+        tracker, _ = self.track([(100, 60)])
+        tracker.save()
+        other = view_at(10, 140)  # Never matches what was saved (as when a see-through minimap matches several places equally)
+        clock = [100.0]
+        with mock.patch.object(minimap_mosaic.time, "time", lambda: clock[0]):
+            for restart_ok in (False, True):
+                tracker = minimap_mosaic.Tracker()  # A new session: loads the saved picture
+                for t in (0, 2, minimap_mosaic.restart_after + 1):
+                    clock[0] = 100.0 + t
+                    m = view_at(10, 140)
+                    tracker.update(m, restart_ok)
+                if restart_ok:
+                    self.assertIsNotNone(tracker.mosaic.last)  # Started over: views are placed again
+                    self.assertEqual(tracker.mosaic.image.shape[:2], VIEW)  # Just this view so far
+                else:
+                    self.assertIsNone(tracker.mosaic.last)  # Something is recorded: keep looking for it in the saved picture
+
     def test_map_change_switches_picture(self):
         tracker, _ = self.track([(100, 60)])
         other = view_at(10, 10)

@@ -1,0 +1,27 @@
+# Bowman (example: set the skill keys to your in-game bindings)
+description = "Bowman: shoots from a distance, backs off when mobs get close, never jump attacks"
+behaviour = "ranged"
+gone_delay = 0.5        # After a hit lands, seconds to watch before attacking again if the mob is still there
+
+[keys]
+jump = "Alt"
+loot = "Z"
+
+[ranged]
+keep_distance = 125      # Step back from mobs whose nearer edge is closer than this
+
+# Listed first, so it's used whenever it's off cooldown and in range
+[[attacks]]
+name = "Arrow Bomb"
+key = "Shift"
+hit_time = 0.35          # Seconds from the key press until the hit shows on the mob
+range_x = [125, 355]
+range_y = [-40, 40]
+cooldown = 1.5
+
+[[attacks]]
+name = "Basic shot"
+key = "Ctrl"
+hit_time = 0.35          # Seconds from the key press until the hit shows on the mob
+range_x = [125, 375]
+range_y = [-40, 40]

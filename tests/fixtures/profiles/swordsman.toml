@@ -1,0 +1,37 @@
+# Sword warrior (previously WarriorShort)
+description = "Warrior with a short-range one or two-handed sword"
+behaviour = "melee"
+gone_delay = 1.0        # After a hit lands, seconds to watch before attacking again if the mob is still there
+
+[keys]
+jump = "Alt"
+loot = "Z"
+
+# Attacks are tried top to bottom; the first one that's ready, reaches the mob and fits the situation is used.
+[[attacks]]
+name = "Mobbing attack"
+key = "Shift"
+hit_time = 0.2         # Seconds from the key press until the hit shows on the mob
+range_x = [0, 75]
+range_y = [-30, 25]
+min_mobs = 2             # Only when at least this many mobs are in reach on the side it hits
+hit_range = 100          # How far in front of the character it hits mobs (range_x is when to use it)
+
+[[attacks]]
+name = "Power attack"
+key = "Space"
+hit_time = 0.2          # Seconds from the key press until the hit shows on the mob
+range_x = [0, 75]
+range_y = [-30, 25]
+opener = true            # Only for the first hit on each mob
+
+[[attacks]]
+name = "Basic attack"
+key = "Ctrl"
+hit_time = 0.2          # Seconds from the key press until the hit shows on the mob
+range_x = [0, 75]
+range_y = [-30, 25]
+jump_attack = true
+jump_reach = 75
+
+# No [[mobility]]: without a dash the bot walks to far-away mobs
