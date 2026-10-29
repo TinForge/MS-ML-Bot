@@ -5,7 +5,7 @@ import threading
 from gui import window
 from data import config, values, rects
 from process import kills, navigation
-from tools import map_recorder, movement
+from tools import map_recorder, movement, route_planner
 from tools.route_planner import RoutePlanner
 from tools import keyboard
 
@@ -19,6 +19,8 @@ explore_min_width = 150  # Narrowest platform worth exploring to: single stair s
 jump_give_up = 3.0  # Seconds trying to jump up onto the same platform before taking it for out of reach
 jump_phase = 60  # Within this distance of a platform's edge the bot is jumping for it, not walking to it
 unreachable_time = 15.0  # Seconds a platform that couldn't be jumped onto is left out of the routes up (a rope is used instead)
+safe_spot_width = 60  # Narrowest safe stretch of platform to retreat to: room to stand without a mob at its edge reaching the player
+arrive_margin = 10  # How close to the middle of the safe stretch counts as there
 
 
 class CalculationThread(threading.Thread):
@@ -40,6 +42,8 @@ class CalculationThread(threading.Thread):
         self.unreachable = {}  # platform_key: time.time() until which it isn't jumped for
         self.planner, self.planner_key = None, None  # Route planner for the recorded map, rebuilt when the recording changes
         self.explore_goal = None  # Platform (index in the recording) being headed for while exploring
+        self.last_seen = None  # (player rect, time.time()) when the nametag was last found, for config lost_grace
+        self.retreat_spot = None  # (platform, map x) being retreated to; False when no safe spot is known
 
 
     def run(self):
@@ -81,8 +85,12 @@ class CalculationThread(threading.Thread):
         skip = self.unreachable_platforms(instances, mapper)
         values.planned_route = None  # Set again below if this frame's plan follows a route
         router = lambda goal: self.route_step(goal, mapper)
-        result = navigation.plan(player, instances, values.nav_jump_height, values.nav_clump_range, self.last_target, explore, standing,
-                                 state == movement.LADDER, skip, router)
+        if values.retreating:  # Low on potions: away from the mobs instead of fighting them
+            result = self.retreat(player, instances, mapper, standing, state == movement.LADDER)
+        else:
+            self.retreat_spot = None
+            result = navigation.plan(player, instances, values.nav_jump_height, values.nav_clump_range, self.last_target, explore, standing,
+                                     state == movement.LADDER, skip, router)
         result = self.unstick_climb(result, player, mapper)
         result = self.finish_climb(result)
         self.watch_jumps(result, mapper)
@@ -95,6 +103,7 @@ class CalculationThread(threading.Thread):
         values.debug_x_distance = result.dx
         values.debug_y_distance = result.dy
         values.debug_on_ladder = result.on_ladder
+        values.debug_ledges = self.ledges(mapper) if result.state == "Attack" and standing else None
         values.debug_direction = keyboard.VK_LEFT if result.dx < 0 else keyboard.VK_RIGHT
         if result.state == "Attack":
             values.debug_crowd = result.crowd
@@ -111,6 +120,12 @@ class CalculationThread(threading.Thread):
             self.planner, self.planner_key = RoutePlanner(mapper.lines, mapper.ladders, values.nav_jump_height), key
             self.explore_goal = None
         return self.planner
+
+    def ledges(self, mapper):  # (left, right) distances from the feet to the ledges of the recorded platform stood on, None if unknown
+        planner = self.route_planner(mapper)
+        feet = mapper.feet if planner is not None else None
+        line = planner.line_at(*feet) if feet is not None else None
+        return planner.ledges(line, feet[0]) if line is not None else None
 
     def route_step(self, goal, mapper):  # The first step of the quickest route to the goal mob's platform (goal None: to a platform
         # worth exploring), as a navigation.Step in screen coords; None without a recorded way there
@@ -134,7 +149,10 @@ class CalculationThread(threading.Thread):
         if not hops:
             return None
         values.planned_route = planner.path(start, feet[0], hops)  # For the overlay's Route option
-        hop = hops[0]
+        return self.hop_step(hops[0], mapper, shift)
+
+    def hop_step(self, hop, mapper, shift):  # A route's hop as a navigation.Step in screen coords
+        dx, dy = shift
         if hop.kind == "rope":
             ladder = mapper.ladders[hop.ladder]
             x = ladder["x"] + dx
@@ -143,6 +161,57 @@ class CalculationThread(threading.Thread):
         else:
             target = rects.PlatformLine([(x + dx, y + dy) for x, y in mapper.lines[hop.to]])
         return navigation.Step(hop.kind, target, hop.x1 + dx, hop.x2 + dx)
+
+    def retreat(self, player, instances, mapper, standing, on_rope):  # To the middle of the nearest safe stretch of platform, ignoring
+        # mobs; sets values.retreat_arrived once there, or straight away when no safe spot is known
+        if player is None:
+            return navigation.Plan("Search")
+        platform = rects.find_player_platform(rects.find_platform_instances(instances), player)
+        planner = self.route_planner(mapper)
+        shift = mapper.screen_shift(mapper.frame_rect) if planner is not None else None
+        feet = mapper.feet if shift is not None else None
+        if feet is None:  # No recorded map to find a safe spot on: stop where it is
+            values.retreat_arrived = True
+            return navigation.Plan(platform=platform)
+        start = planner.line_at(*feet)
+        if start is None:  # On a rope or in the air: climb on up, or land first
+            return navigation.plan(player, [r for r in instances if r.name != "Mob"], values.nav_jump_height, standing=standing, on_rope=on_rope)
+        if self.retreat_spot is None:
+            self.retreat_spot = self.safe_spot(planner, mapper, start, feet[0]) or False
+        if not self.retreat_spot:
+            values.retreat_arrived = True
+            return navigation.Plan(platform=platform)
+        line, x = self.retreat_spot
+        dx, dy = shift
+        if planner.same_platform(line, start):  # On it: walk to the middle
+            distance = x + dx - player.center_x
+            if abs(distance) <= arrive_margin:
+                values.retreat_arrived = True
+                return navigation.Plan(platform=platform)
+            target = rects.PlatformLine([(px + dx, py + dy) for px, py in mapper.lines[line]])
+            return navigation.Plan("Navigate", target, route="walk", dx=distance, platform=platform)
+        avoid = self.unreachable_lines(mapper, shift) if self.unreachable else set()
+        hops = planner.route(start, feet[0], line, avoid)
+        if not hops:  # No way there after all (a jump kept failing): pick again next time
+            self.retreat_spot = None
+            return navigation.Plan(platform=platform)
+        values.planned_route = planner.path(start, feet[0], hops)
+        return navigation.step_plan(player, self.hop_step(hops[0], mapper, shift), platform, None)
+
+    def safe_spot(self, planner, mapper, start, x):  # (platform, map x) of the middle of the nearest safe stretch, failing that the
+        # nearest only occasionally visited by mobs; None when neither has been learned yet
+        reachable = planner.routes(start, x)
+        for safety in (map_recorder.SAFE, map_recorder.OCCASIONAL):
+            best = None
+            for line, (seconds, _) in reachable.items():
+                for x1, x2 in mapper.platforms.stretches(mapper.lines[line], safety, safe_spot_width):
+                    middle = (x1 + x2) / 2
+                    walk = abs(middle - x) / route_planner.walk_speed if planner.same_platform(line, start) else 0.0
+                    if best is None or seconds + walk < best[0]:
+                        best = (seconds + walk, line, middle)
+            if best is not None:
+                return best[1], best[2]
+        return None
 
     def explore_route(self, planner, mapper, start, x, avoid):  # Toward the nearest platform where mobs have been seen; failing
         # that, the nearest one not watched long enough to know. The goal is kept until it's reached, so the route doesn't waver
@@ -241,10 +310,17 @@ class CalculationThread(threading.Thread):
         return self.explore_direction
 
 
-    def find_player(self, instances):  # The player found by their nametag, or None if it isn't visible
-        if values.player_rect is None:
+    def find_player(self, instances):  # The player found by their nametag. While it's covered (a mob or skill effect over it), for up to
+        # config lost_grace: where it was last seen, so navigation and fighting carry on. The camera follows the player, so they stay
+        # about there on screen. None after that, which stops and searches
+        rect, now = values.player_rect, time.time()
+        if rect is not None:
+            self.last_seen = (rect, now)
+        elif self.last_seen is not None and now - self.last_seen[1] <= config.lost_grace:
+            rect = self.last_seen[0]
+        if rect is None:
             return None
-        x1, y1, x2, y2 = values.player_rect
+        x1, y1, x2, y2 = rect
         return rects.Rect("Player", "blue", x1, y1, x2, y2, 1)
 
 
@@ -255,6 +331,7 @@ class CalculationThread(threading.Thread):
         values.debug_path = None
         values.debug_route = None
         values.debug_on_ladder = False
+        values.debug_ledges = None
         values.debug_x_distance = 0
         values.debug_y_distance = 0
         values.debug_direction = None

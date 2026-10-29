@@ -3,7 +3,7 @@
 import random
 from dataclasses import dataclass, field
 
-from data import values
+from data import config, values
 from data.profiles import Profile
 from process import kills
 
@@ -24,6 +24,7 @@ class Situation:  # One tick's view of the game, built from values set by calcul
     facing: str = None  # Which way the character faces, left or right, None if unknown
     kill_check: bool = False  # EXP Kill Check is on and EXP is being read: kills are told from EXP changing, not by waiting gone_delay
     killed_at: float = None  # Grab time of the frame EXP last changed in, None if it hasn't
+    ledges: tuple = None  # Attack: (left, right) px from the feet to the ledges of the platform stood on, each None if there's none
 
     def mobs_ahead(self):  # (distance, height) of the mobs on the target's side or overlapping the player, which an attack facing it can hit
         crowd = self.crowd if self.crowd else [(self.dx, self.dy)]
@@ -60,7 +61,7 @@ class Situation:  # One tick's view of the game, built from values set by calcul
         return cls(state=state, dx=values.debug_x_distance, dy=values.debug_y_distance, on_ladder=values.debug_on_ladder, route=values.debug_route,
                    randomizer=values.randomizer_active, speed=values.player_speed, now=now, attack_last_used=attack_last_used, target_seen=seen,
                    crowd=list(values.debug_crowd or []) if state == "Attack" else None,
-                   facing=facing, kill_check=values.exp_check_active and check.usable(now), killed_at=check.changed_at)
+                   ledges=values.debug_ledges if state == "Attack" else None, facing=facing, kill_check=values.exp_check_active and check.usable(now), killed_at=check.changed_at)
 
 
 @dataclass
@@ -86,6 +87,8 @@ reverse_delay = 0.3  # Seconds after walking one way before walking the other, s
 rope_grab_time = 0.8  # Seconds after jumping at a rope to keep holding Up, not jump again: a second jump would leave the rope it caught
 new_target_gap = 1.5  # Seconds without attacking after which the next target counts as a new mob
 new_target_shift = 60  # How far the target may move between attacks (knockback, walking) and still be the same mob
+ledge_margin = config.ledge_margin  # While fighting, px kept from a ledge that a mob's hits would knock the player off; backing away
+# from a mob stops at twice this, so the two never undo each other
 
 
 class Behaviour:  # Shared by every style: navigating between platforms and searching for the player
@@ -126,7 +129,7 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
         if s.state != "Search":
             self.lost_since = None
         if s.state == "Attack":
-            return self.fight(s)
+            return self.off_ledge(s) or self.fight(s)
         if s.state == "Navigate":
             return self.navigate(s)
         if s.state == "Search":  # The nametag is usually just covered for a moment: wait (pressing Up here used to grab ropes)
@@ -145,6 +148,24 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
 
     def fight(self, s: Situation) -> Action:
         raise NotImplementedError
+
+    def ledge(self, s: Situation, side):  # Distance to the ledge on that side, None without one
+        return s.ledges[0 if side == "left" else 1] if s.ledges is not None else None
+
+    def off_ledge(self, s: Situation):  # Near a ledge with the mob on the inner side, a hit knocks the player outward, over it: step in
+        # first (toward the mob, or past it). None when it's safe to fight. A mob between the player and the ledge knocks them inward
+        for side, inward in (("left", "right"), ("right", "left")):
+            distance = self.ledge(s, side)
+            mob_outside = s.dx < 0 if side == "left" else s.dx > 0
+            other = self.ledge(s, inward)
+            too_narrow = other is not None and distance is not None and distance + other < 2 * ledge_margin  # No room either way
+            if distance is not None and distance < ledge_margin and not mob_outside and not too_narrow:
+                return self.walk(s, inward, "stepping away from the ledge")
+        return None
+
+    def room_behind(self, s: Situation):  # Whether backing away from the mob keeps clear of a ledge
+        distance = self.ledge(s, s.away)
+        return distance is None or distance > 2 * ledge_margin
 
     def strike(self, s: Situation, kind, attack, label):  # After an attack, waits for its hit to land, then checks the mob is alive
         # before attacking again: with EXP Kill Check, from EXP not going up; otherwise by gone_delay passing with the mob still seen (a
@@ -232,7 +253,7 @@ class MeleeBehaviour(Behaviour):  # Close in, attack, jump attack mobs slightly 
             return self.strike(s, "jump_attack", attack, "jump attack: ")
         if distance > p.max_range:
             return self.walk(s, s.direction, "move closer")
-        if distance < p.min_range:
+        if distance < p.min_range and self.room_behind(s):
             return Action("move", s.away, label="move away")
         return Action("stop", label="mob out of reach")
 
@@ -244,14 +265,14 @@ class RangedBehaviour(Behaviour):  # Keep distance, shoot from range, never jump
         if p.mobility_for(distance) is not None:
             return self.approach(s)
         same_level = any(a.range_y[0] <= height <= a.range_y[1] for a in p.attacks)  # Mobs on other platforms aren't a threat
-        if distance < p.keep_distance and same_level:
+        if distance < p.keep_distance and same_level and self.room_behind(s):
             return Action("move", s.away, label="back off")
         attack = self.pick_attack(s)
         if attack is not None:
             return self.strike(s, "attack", attack, "attack: ")
         if distance > p.max_range:
             return self.walk(s, s.direction, "move closer")
-        if distance < p.min_range and same_level:
+        if distance < p.min_range and same_level and self.room_behind(s):
             return Action("move", s.away, label="move away")
         return Action("stop", label="mob out of reach")
 

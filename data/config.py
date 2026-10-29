@@ -8,12 +8,12 @@ path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 # Used for anything missing from config.toml or of the wrong type
 DEFAULTS = {
     "detection": {"stats_interval": 0.25, "player_interval": 0.05, "model_imgsz": 960},
-    "player": {"search_margin": (120, 80), "character_size": (50, 66), "nametag_tolerance": 0.05},
-    "potion": {"cooldown": 3.0, "confirm_reads": 2},
-    "display": {"window_width": 390, "drop_display_time": 1.5, "potion_display_time": 1.5, "gui_fps": 30},
+    "player": {"search_margin": (120, 80), "character_size": (50, 66), "nametag_tolerance": 0.05, "lost_grace": 1.0},
+    "potion": {"cooldown": 3.0, "confirm_reads": 2, "retreat_at": 1},
+    "display": {"window_width": 390, "drop_display_time": 1.5, "potion_display_time": 1.5, "gui_fps": 30, "overlay_prediction": True},
     "frame_times": {"smoothing": 0.1, "stale_time": 1.0},
     "input": {"press_time": (0.07, 0.12), "press_gap": (0.05, 0.12), "hold_jitter": 0.1},
-    "movement": {"explore_delay": 3.0},
+    "movement": {"explore_delay": 3.0, "ledge_margin": 60},
     "kills": {"exp_wait": 0.1, "dead_time": 1.2},
 }
 
@@ -22,6 +22,10 @@ def convert(value, default):  # Returns value in the default's type, or raises V
     if isinstance(default, str):
         if not isinstance(value, str):
             raise ValueError("expected text in quotes")
+        return value
+    if isinstance(default, bool):
+        if not isinstance(value, bool):
+            raise ValueError("expected true or false")
         return value
     if isinstance(default, tuple):
         if not isinstance(value, list) or len(value) != len(default):
@@ -62,17 +66,21 @@ model_imgsz = settings["detection"]["model_imgsz"]
 search_margin = settings["player"]["search_margin"]
 character_size = settings["player"]["character_size"]
 nametag_tolerance = settings["player"]["nametag_tolerance"]
+lost_grace = settings["player"]["lost_grace"]
 potion_cooldown = settings["potion"]["cooldown"]
 potion_confirm_reads = settings["potion"]["confirm_reads"]
+retreat_at = settings["potion"]["retreat_at"]
 window_width = settings["display"]["window_width"]
 drop_display_time = settings["display"]["drop_display_time"]
 potion_display_time = settings["display"]["potion_display_time"]
 gui_fps = settings["display"]["gui_fps"]
+overlay_prediction = settings["display"]["overlay_prediction"]
 timing_smoothing = settings["frame_times"]["smoothing"]
 timing_stale_time = settings["frame_times"]["stale_time"]
 press_time = settings["input"]["press_time"]
 press_gap = settings["input"]["press_gap"]
 hold_jitter = settings["input"]["hold_jitter"]
 explore_delay = settings["movement"]["explore_delay"]
+ledge_margin = settings["movement"]["ledge_margin"]
 exp_wait = settings["kills"]["exp_wait"]
 dead_time = settings["kills"]["dead_time"]

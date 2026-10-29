@@ -6,6 +6,7 @@ from tkinter.ttk import *
 from gui import references
 from gui.widgets import update
 from data import config, values
+from process import bot
 from tools import keyboard
 from tools.persistent import save_data
 
@@ -49,6 +50,7 @@ class StatsPanel(LabelFrame):
         #
         Label(self, text="Potion at").grid(sticky=W, row=0, column=3, padx=2)
         Label(self, text="Key").grid(row=0, column=4, padx=2)
+        Label(self, text="Left").grid(row=0, column=5, padx=2)
         #
         Label(self, text="HP").grid(sticky=W, row=1, column=0, padx=(10, 5), pady=5)
         self.hp_text = Label(self, width=value_width)
@@ -56,6 +58,8 @@ class StatsPanel(LabelFrame):
         self.hp_drop = Label(self, foreground="red", width=drop_width, anchor=E, compound=LEFT)  # Also shows the potion indicator
         self.hp_drop.grid(sticky=E, row=1, column=2, padx=2, pady=5)
         self.add_potion_inputs(1, "hp", save_data.hp_potion_threshold, save_data.hp_potion_key)
+        self.hp_left = Label(self, width=4, anchor=E)  # Potions left on its key, from the quickslot
+        self.hp_left.grid(sticky=E, row=1, column=5, padx=(2, 10), pady=5)
         #
         Label(self, text="MP").grid(sticky=W, row=2, column=0, padx=(10, 5), pady=5)
         self.mp_text = Label(self, width=value_width)
@@ -63,6 +67,8 @@ class StatsPanel(LabelFrame):
         self.mp_drop = Label(self, foreground="red", width=drop_width, anchor=E, compound=LEFT)
         self.mp_drop.grid(sticky=E, row=2, column=2, padx=2, pady=5)
         self.add_potion_inputs(2, "mp", save_data.mp_potion_threshold, save_data.mp_potion_key)
+        self.mp_left = Label(self, width=4, anchor=E)
+        self.mp_left.grid(sticky=E, row=2, column=5, padx=(2, 10), pady=5)
         #
         Label(self, text="EXP").grid(sticky=W, row=3, column=0, padx=(10, 5), pady=5)
         self.exp_text = Label(self)
@@ -100,6 +106,12 @@ class StatsPanel(LabelFrame):
         self.refresh_stat("HP", values.player_hp, self.hp_tracker, self.hp_text, self.hp_drop)
         self.refresh_stat("MP", values.player_mp, self.mp_tracker, self.mp_text, self.mp_drop)
         self.refresh_exp(values.player_exp)
+        self.refresh_left(self.hp_left, values.hp_potion_key)
+        self.refresh_left(self.mp_left, values.mp_potion_key)
+
+    def refresh_left(self, label, key):  # Red "out" when they're used up, "?" when it can't be read
+        left = bot.potions_left(key)
+        update(label, text="?" if left is None else ("out" if left == 0 else str(left)), foreground="red" if left == 0 else "")
 
     def refresh_exp(self, value):
         update(self.exp_text, text="%d (%.2f%%)" % value if value is not None else "?")

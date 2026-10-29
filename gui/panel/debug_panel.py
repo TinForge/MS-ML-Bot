@@ -41,10 +41,12 @@ class DebugPanel(LabelFrame):
         self.map_image = None
         self.map_id = None
         #
-        self.recording_display = Label(self)  # Recorded platforms and ladders on this map
+        self.recording_display = Label(self, wraplength=260, justify=LEFT)  # Recorded platforms and ladders on this map, or what it waits for
         self.recording_display.grid(sticky=W, row=3, column=0, padx=5, pady=5)
         self.record_button = Button(self, text="Record", command=lambda: self.toggle_recording())
-        self.record_button.grid(sticky=E, row=3, column=1, padx=5, pady=5)
+        self.record_button.grid(sticky=E, row=3, column=1, padx=(5, 0), pady=5)
+        self.erase_button = Button(self, text="Erase", command=lambda: self.toggle_erasing())
+        self.erase_button.grid(sticky=E, row=3, column=2, padx=5, pady=5)
         #
         #
         self.grid_columnconfigure(0, weight=1)
@@ -53,7 +55,19 @@ class DebugPanel(LabelFrame):
 
     def toggle_recording(self):  # Records the platforms and ladders the player walks and climbs
         values.record_platforms = not values.record_platforms
+        if values.record_platforms:
+            values.erase_platforms = False  # One or the other
+        self.update_buttons()
+
+    def toggle_erasing(self):  # Removes the recorded platforms and ladders the player passes over, to clean up bad recording
+        values.erase_platforms = not values.erase_platforms
+        if values.erase_platforms:
+            values.record_platforms = False
+        self.update_buttons()
+
+    def update_buttons(self):
         update(self.record_button, text="Stop" if values.record_platforms else "Record")
+        update(self.erase_button, text="Stop" if values.erase_platforms else "Erase")
 
     def refresh(self):
         rect = values.window_rect
@@ -106,6 +120,9 @@ class DebugPanel(LabelFrame):
         mapper = values.mapper
         if mapper is None or mapper.calibration is None:
             update(self.recording_display, text="Platforms: no map yet")
+            return
+        if mapper.status is not None:  # Not lined up with the map yet: what it's waiting for
+            update(self.recording_display, text="Platforms: " + mapper.status)
             return
         scale = mapper.calibration.scale
         update(self.recording_display, text="Platforms: %d, ladders: %d%s" % (len(mapper.lines), len(mapper.ladders), ", scale %.1f" % scale if scale else ""))

@@ -9,6 +9,7 @@ from tools import keyboard
 
 potion_cooldown = config.potion_cooldown  # Seconds before the same key can be pressed again, shared when HP and MP use the same key
 potion_confirm_reads = config.potion_confirm_reads  # Consecutive fresh low readings needed, so a single misread doesn't use a potion
+retreat_at = config.retreat_at  # Potions left at which botting heads for a safe spot and stops (0: never)
 
 
 class BotThread(threading.Thread):
@@ -26,6 +27,8 @@ class BotThread(threading.Thread):
         self.potion_read_id = None  # Last HP/MP reading auto potion acted on
         self.potion_low_reads = {"HP": 0, "MP": 0}
         self.potion_key_time = {}  # time.time() each key was last pressed
+        self.retreat_read_id = None  # Last quickslot reading the retreat check acted on
+        self.low_potion_reads = 0  # Consecutive fresh readings with potions down to retreat_at
 
 
     def run(self):
@@ -36,9 +39,14 @@ class BotThread(threading.Thread):
             if self.is_running is False:
                 if self.executor is not None:
                     self.executor.stop_moving()  # Don't leave an arrow key held down
+                values.retreating = False
                 time.sleep(0.2)  # Adjustable
             else:
-                self.calculate()
+                self.check_potions()
+                if values.retreating and values.retreat_arrived:
+                    self.finish_retreat()
+                else:
+                    self.calculate()
                 time.sleep(0.001)  # Adjustable
 
 
@@ -82,6 +90,32 @@ class BotThread(threading.Thread):
         values.debug_action = "nothing"
 
 
+    def check_potions(self):  # Potions down to retreat_at on a key auto potion uses: retreat to a safe spot (calculations), then stop
+        if not values.retreating:
+            values.retreat_status = None  # Botting again: the last stop's message is done with
+        read_id = values.stats_read_id
+        if retreat_at <= 0 or values.retreating or read_id == self.retreat_read_id:  # Only fresh readings count towards it
+            return
+        self.retreat_read_id = read_id
+        keys = [key for key, threshold in ((values.hp_potion_key, values.hp_potion_threshold), (values.mp_potion_key, values.mp_potion_threshold))
+                if threshold > 0]
+        low = any(left is not None and left <= retreat_at for left in map(potions_left, keys))
+        self.low_potion_reads = self.low_potion_reads + 1 if low else 0
+        if self.low_potion_reads >= potion_confirm_reads:  # So one misread doesn't end botting
+            self.low_potion_reads = 0
+            values.retreat_arrived, values.retreating = False, True
+            values.retreat_status = "Low on potions: heading to a safe spot"
+            print(values.retreat_status)
+
+    def finish_retreat(self):  # At the safe spot: botting off
+        if self.executor is not None:
+            self.executor.stop_moving()
+        self.is_running = False
+        values.retreating = False
+        values.retreat_status = "Stopped at a safe spot: low on potions"
+        print(values.retreat_status)
+
+
     def auto_potion(self):
         read_id = values.stats_read_id
         if read_id == self.potion_read_id:  # Only act on fresh readings, never on a stale or frozen value
@@ -102,6 +136,8 @@ class BotThread(threading.Thread):
             return
         if time.time() - self.potion_key_time.get(key_name, 0) < potion_cooldown:
             return
+        if potions_left(key_name) == 0:  # Out: pressing does nothing
+            return
         self.potion_low_reads[stat] = 0  # Readings from before this potion never count towards the next
         self.potion_key_time[key_name] = time.time()
         values.last_potion_time[stat] = time.time()
@@ -109,6 +145,11 @@ class BotThread(threading.Thread):
         keyboard.PressKey(key)
         time.sleep(0.05)
         keyboard.ReleaseKey(key)
+
+
+def potions_left(key_name):  # Items left in the quickslot on that key: 0 when out, None if unknown (panel hidden, nothing on the key)
+    slots = values.quickslot
+    return slots.get(key_name) if slots is not None else None
 
 
 instance: BotThread = None

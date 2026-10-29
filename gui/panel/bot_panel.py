@@ -55,6 +55,9 @@ class BotPanel(LabelFrame):
         Label(self, text="EXP Kill Check", font=references.var_font).grid(sticky=W, row=6, column=1, padx=0, pady=0)
         Button(self, text="Toggle", command=lambda: self.toggle_exp_check()).grid(sticky=E, row=6, column=2, padx=0, pady=0)
         #
+        self.retreat_info = Label(self, foreground="#d06000", wraplength=340)  # Low on potions: retreating, or stopped
+        self.retreat_info.grid(sticky=W, row=7, column=0, columnspan=3, padx=10)
+        #
         self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
 
@@ -102,6 +105,7 @@ class BotPanel(LabelFrame):
         update(self.potion_active, image=self.status_icon(values.potion_active, True))  # Works without botting
         update(self.human_input, image=self.status_icon(values.human_input, values.bot_active))
         update(self.exp_check, image=self.status_icon(values.exp_check_active, values.bot_active))
+        update(self.retreat_info, text=values.retreat_status or "")
 
     def status_icon(self, enabled, running):  # Yellow when enabled but waiting on the Botting process
         if not enabled:

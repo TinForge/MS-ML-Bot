@@ -7,7 +7,7 @@ import threading
 
 from data import config, values
 from process import kills
-from tools import stat_reader, player_finder, minimap, minimap_mosaic, map_recorder, screen, timer
+from tools import quickslot, stat_reader, player_finder, minimap, minimap_mosaic, map_recorder, screen, timer
 
 stats_interval = config.stats_interval  # Seconds between reads while detection is off and the player box is hidden
 player_interval = config.player_interval  # Same, while the player box is shown
@@ -86,7 +86,7 @@ class DetectionThread(threading.Thread):
 
     def read_stats_now(self, frame, frame_rect, mobs, frame_time=None):
         if frame is None:
-            full = values.show_player_rect or values.record_platforms or values.show_platforms or values.show_attack_range  # Only search for the player when it's needed
+            full = values.show_player_rect or values.record_platforms or values.erase_platforms or values.show_platforms or values.show_attack_range  # Only search for the player when it's needed
             if time.time() - self.last_stats_time < (player_interval if full else stats_interval):  # Faster while the player box needs to follow smoothly
                 return
             frame_rect = values.window_rect
@@ -102,12 +102,13 @@ class DetectionThread(threading.Thread):
         # mapping (with the last pass's minimap, which moves slowly); HP/MP and the minimap barely change from frame to frame
         self.find_player(frame if full else None, frame_rect)
         values.player_read_id += 1  # Calculations plan again on a new position
-        self.update_mapper(frame, frame_rect, mobs)
+        self.update_mapper(frame, frame_rect, mobs, frame_time)
         start = time.perf_counter()
         if frame is None:
-            values.player_hp = values.player_mp = values.player_exp = values.player_name = values.minimap = None
+            values.player_hp = values.player_mp = values.player_exp = values.player_name = values.minimap = values.quickslot = None
         else:
             values.player_hp, values.player_mp, values.player_exp = stat_reader.read_frame(frame)
+            values.quickslot = quickslot.read_frame(frame)
             kills.instance.read(values.player_exp[0] if values.player_exp is not None else None, frame_time or time.time())
             values.player_name = player_finder.read_name(frame)
         timer.record("Stats", start)
@@ -115,11 +116,13 @@ class DetectionThread(threading.Thread):
         self.read_minimap(frame, frame_rect)
 
 
-    def update_mapper(self, frame, frame_rect, mobs=None):  # Follows the player for recording or drawing platforms, and learns where mobs go
-        if frame is None or not (values.record_platforms or values.show_platforms or values.calculations_active):  # Navigation uses the recorded platforms
+    def update_mapper(self, frame, frame_rect, mobs=None, frame_time=None):  # Follows the player for recording or drawing platforms, and
+        # learns where mobs go. frame_time: when the frame was grabbed, which movement and the overlay's drawing ahead are timed from
+        if frame is None or not (values.record_platforms or values.erase_platforms or values.show_platforms or values.calculations_active):  # Navigation uses the recorded platforms
             return
         start = time.perf_counter()
-        self.mapper.update(frame, frame_rect, values.player_rect, values.minimap, time.time(), values.record_platforms, mobs)
+        self.mapper.update(frame, frame_rect, values.player_rect, values.minimap, frame_time or time.time(), values.record_platforms, mobs,
+                           values.erase_platforms)
         timer.record("Mapping", start)
 
 
@@ -131,7 +134,7 @@ class DetectionThread(threading.Thread):
         if result is not None:
             x1, y1, x2, y2 = result.map_rect
             result.map_rect = (x1 + frame_rect[0], y1 + frame_rect[1], x2 + frame_rect[0], y2 + frame_rect[1])
-            self.minimap_tracker.update(result)
+            self.minimap_tracker.update(result, restart_ok=not self.mapper.recorded(result.map_id))
         values.minimap = result
         timer.record("Minimap", start)
 

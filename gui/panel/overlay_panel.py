@@ -72,7 +72,7 @@ class OverlayPanel(LabelFrame):
                 overlay.instance.render_attack_ranges(values.player_rect, profile.attacks)
 
             if values.show_platforms and values.mapper is not None and values.window_rect is not None:
-                overlay.instance.render_platforms(values.mapper, values.window_rect)
+                overlay.instance.render_platforms(values.mapper, values.window_rect, values.erase_platforms)
 
             route = values.planned_route  # Read once: the calculations thread replaces it every frame
             if "Route" in self.selected_options and route and values.mapper is not None and values.window_rect is not None:
