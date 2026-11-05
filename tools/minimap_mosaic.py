@@ -13,11 +13,37 @@ folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 patch_margin = 0.25  # Each view is located by its central part (minus this fraction per side), which is the most likely to be known already
 close_level = 8  # Grey levels within which a pixel counts as matching
 step_match = 0.6  # Fraction of pixels that must match the previous view; the minimap is see-through, so the game behind it changes some
-picture_match = 0.4  # Same, against the saved picture (used after a jump or when a session starts), which holds an older background
-picture_lead = 0.15  # ... and the best position must match that much better than any other, so a lookalike isn't taken
+# After a jump or when a session starts, the view is searched for in the saved picture, which holds older backgrounds. Its middle alone,
+# matched by the share of close pixels, was ambiguous on see-through minimaps and refused every time. The whole view is compared instead
+search_interval = 0.5  # Seconds between searches while the view can't be placed (each takes tens of milliseconds)
+view_overhang = 0.4  # Share of the view that may hang over the picture's edges: scrolled to a part of the map not seen yet
+search_lead = 1.5  # The best place must match this many times better than any other 3 px or more away, or none is taken
+picture_mse = 0.02  # Mean squared grey difference (0-1) above which even the best place isn't the view
+art_mse = 0.1  # The same for the minimap's own bright art (the share of its pixels that disagree), tried when greys are ambiguous: the
+# minimap is see-through, and an old background showing through it can make several places look alike
 save_interval = 5.0  # Seconds between saves while the picture keeps growing
 restart_after = 5.0  # Seconds the view can't be found in the saved picture before a map with nothing recorded on it starts a new one: on
 # maps of repeating platforms seen through a see-through minimap, the saved picture can match several places equally
+
+
+def grey_levels(rgb):  # 0-1
+    return cv2.cvtColor(np.ascontiguousarray(rgb), cv2.COLOR_RGB2GRAY).astype(np.float32) / 255
+
+
+def art(rgb):  # 1 where the minimap's own drawing is (bright, or strongly coloured: platforms, ropes, edges), 0 for the dim scene behind
+    rgb = rgb.astype(np.int16)
+    return ((rgb.max(axis=2) >= 150) | (rgb.max(axis=2) - rgb.min(axis=2) >= 80)).astype(np.float32)
+
+
+def clear_best(score, limit):  # (x, y) of the lowest score, if it's under limit and clearly lower than anywhere 3 px or more away
+    _, _, loc, _ = cv2.minMaxLoc(score)
+    best = float(score[loc[1], loc[0]])
+    if not best <= limit:
+        return None
+    others = score.copy()
+    others[max(0, loc[1] - 2):loc[1] + 3, max(0, loc[0] - 2):loc[0] + 3] = np.inf
+    second = float(others.min()) if others.size else np.inf
+    return loc if second > best * search_lead + 1e-6 else None  # Two places alike (a repeating map): neither
 
 
 class Mosaic:  # The stitched minimap of one map
@@ -31,6 +57,7 @@ class Mosaic:  # The stitched minimap of one map
         self.dirty = False
         self.last_save = 0
         self.unplaced_since = None  # When the views started failing to be placed in the saved picture, this session
+        self.next_search = 0  # time.time() before which the saved picture isn't searched again (search_interval)
         if load:
             self.load()
 
@@ -91,27 +118,44 @@ class Mosaic:  # The stitched minimap of one map
             loc = self.match(self.previous[0], patch, mask, step_match)
             if loc is not None:
                 return self.last[0] + loc[0] - mx, self.last[1] + loc[1] - my
-        grey = cv2.cvtColor(self.image, cv2.COLOR_RGB2GRAY)  # After a jump or at the start: find the view in the saved picture
-        grey[~self.known] = 0
-        loc = self.match(grey, patch, mask, picture_match, picture_lead)
-        return None if loc is None else (loc[0] - mx, loc[1] - my)
+        return self.find_view(view, moving)  # After a jump or at the start: in the saved picture
+
+    def find_view(self, view, moving):  # The view's top-left in the saved picture where the whole of it best matches the known pixels,
+        # if that's clearly the place: greys first, then only the minimap's own art. None if neither is clear
+        now = time.time()
+        if now < self.next_search:
+            return None
+        self.next_search = now + search_interval
+        h, w = view.shape[:2]
+        py, px = int(h * view_overhang), int(w * view_overhang)
+        if self.image.shape[0] + 2 * py < h or self.image.shape[1] + 2 * px < w:
+            return None
+        pad = lambda a: cv2.copyMakeBorder(a, py, py, px, px, cv2.BORDER_CONSTANT, value=0)
+        known, usable = pad(self.known.astype(np.float32)), (~moving).astype(np.float32)
+        for features, limit in ((grey_levels, picture_mse), (art, art_mse)):
+            v, p = features(view), pad(features(self.image))
+            a = cv2.matchTemplate(known, usable * v * v, cv2.TM_CCORR)  # Sums over the pixels known in the picture and usable in the
+            b = cv2.matchTemplate(known * p, usable * v, cv2.TM_CCORR)  # view, at every place: mean squared difference from them
+            c = cv2.matchTemplate(known * p * p, usable, cv2.TM_CCORR)
+            n = cv2.matchTemplate(known, usable, cv2.TM_CCORR)
+            total = usable.sum()  # View pixels off the known picture count as half a mismatch at the limit: free, hanging over the edge
+            # would let whatever tells two places apart slip out of view
+            unknown = limit / 2 * (total - n)
+            score = np.where(n >= (1 - view_overhang) * total, (a - 2 * b + c + unknown) / total, np.inf).astype(np.float32)
+            loc = clear_best(score, limit)
+            if loc is not None:
+                return loc[0] - px, loc[1] - py
+        return None
 
 
     @staticmethod
-    def match(grey, patch, mask, min_match, lead=None):  # Best position of patch in grey, if enough of its pixels match there
+    def match(grey, patch, mask, min_match):  # Best position of patch in grey, if enough of its pixels match there
         if grey.shape[0] < patch.shape[0] or grey.shape[1] < patch.shape[1]:
             return None
         result = cv2.matchTemplate(grey, patch, cv2.TM_SQDIFF, mask=mask)
         _, _, loc, _ = cv2.minMaxLoc(result)
-        matched = Mosaic.matching(grey, patch, mask, loc)
-        if matched < min_match:  # Not this view: e.g. scrolled somewhere not seen yet
+        if Mosaic.matching(grey, patch, mask, loc) < min_match:  # Not this view: e.g. scrolled somewhere not seen yet
             return None
-        if lead is not None:  # Compare with the best position at least 3 px away
-            x, y = loc
-            result[max(0, y - 2):y + 3, max(0, x - 2):x + 3] = np.inf
-            _, _, other, _ = cv2.minMaxLoc(result)
-            if other != loc and matched - Mosaic.matching(grey, patch, mask, other) < lead:
-                return None
         return loc
 
     @staticmethod

@@ -6,7 +6,7 @@ from tkinter.ttk import *
 from gui import profile_editor, references
 from gui.widgets import update
 from data import values, profiles
-from process import bot
+from process import bot, calculations
 from tools.persistent import save_data
 
 
@@ -30,33 +30,41 @@ class BotPanel(LabelFrame):
         self.profile_info = Label(self, foreground="gray", wraplength=340)  # Profile description, or why it couldn't load
         self.profile_info.grid(sticky=W, row=1, column=0, columnspan=3, padx=10, pady=(0, 5))
         #
+        Label(self, text="Routing", font=references.var_font).grid(sticky=W, row=2, column=1, padx=0, pady=5)
+        saved = save_data.routing_mode.read()
+        values.routing_mode = saved if saved in calculations.ROUTING else "hunt"
+        self.routing = StringVar(value=calculations.ROUTING[values.routing_mode])
+        picker = Combobox(self, textvariable=self.routing, values=list(calculations.ROUTING.values()), state="readonly", width=19)
+        picker.grid(sticky=E, row=2, column=2, padx=0, pady=5)
+        picker.bind("<<ComboboxSelected>>", lambda event: self.on_routing_selected())
+        #
         self.potion_active = Label(self, image=references.red_icon)
-        self.potion_active.grid(row=2, column=0, padx=15, pady=5)
-        Label(self, text="Auto Potion", font=references.var_font).grid(sticky=W, row=2, column=1, padx=0, pady=0)
-        Button(self, text="Toggle", command=lambda: self.toggle_potion()).grid(sticky=E, row=2, column=2, padx=0, pady=0)
+        self.potion_active.grid(row=3, column=0, padx=15, pady=5)
+        Label(self, text="Auto Potion", font=references.var_font).grid(sticky=W, row=3, column=1, padx=0, pady=0)
+        Button(self, text="Toggle", command=lambda: self.toggle_potion()).grid(sticky=E, row=3, column=2, padx=0, pady=0)
         #
         self.looting_active = Label(self, image=references.red_icon)
-        self.looting_active.grid(row=3, column=0, padx=15, pady=5)
-        Label(self, text="Auto Looting", font=references.var_font).grid(sticky=W, row=3, column=1, padx=0, pady=0)
-        Button(self, text="Toggle", command=lambda: self.toggle_looting()).grid(sticky=E, row=3, column=2, padx=0, pady=0)
+        self.looting_active.grid(row=4, column=0, padx=15, pady=5)
+        Label(self, text="Auto Looting", font=references.var_font).grid(sticky=W, row=4, column=1, padx=0, pady=0)
+        Button(self, text="Toggle", command=lambda: self.toggle_looting()).grid(sticky=E, row=4, column=2, padx=0, pady=0)
         #
         self.human_input = Label(self, image=references.red_icon)
-        self.human_input.grid(row=4, column=0, padx=15, pady=5)
-        Label(self, text="Human Key Presses", font=references.var_font).grid(sticky=W, row=4, column=1, padx=0, pady=0)
-        Button(self, text="Toggle", command=lambda: self.toggle_human_input()).grid(sticky=E, row=4, column=2, padx=0, pady=0)
+        self.human_input.grid(row=5, column=0, padx=15, pady=5)
+        Label(self, text="Human Key Presses", font=references.var_font).grid(sticky=W, row=5, column=1, padx=0, pady=0)
+        Button(self, text="Toggle", command=lambda: self.toggle_human_input()).grid(sticky=E, row=5, column=2, padx=0, pady=0)
         #
         self.random_behaviour = Label(self, image=references.red_icon)
-        self.random_behaviour.grid(row=5, column=0, padx=15, pady=5)
-        Label(self, text="Random Behaviour", font=references.var_font).grid(sticky=W, row=5, column=1, padx=0, pady=0)
-        Button(self, text="Toggle", command=lambda: self.toggle_random_behaviour()).grid(sticky=E, row=5, column=2, padx=0, pady=0)
+        self.random_behaviour.grid(row=6, column=0, padx=15, pady=5)
+        Label(self, text="Random Behaviour", font=references.var_font).grid(sticky=W, row=6, column=1, padx=0, pady=0)
+        Button(self, text="Toggle", command=lambda: self.toggle_random_behaviour()).grid(sticky=E, row=6, column=2, padx=0, pady=0)
         #
         self.exp_check = Label(self, image=references.red_icon)
-        self.exp_check.grid(row=6, column=0, padx=15, pady=5)
-        Label(self, text="EXP Kill Check", font=references.var_font).grid(sticky=W, row=6, column=1, padx=0, pady=0)
-        Button(self, text="Toggle", command=lambda: self.toggle_exp_check()).grid(sticky=E, row=6, column=2, padx=0, pady=0)
+        self.exp_check.grid(row=7, column=0, padx=15, pady=5)
+        Label(self, text="EXP Kill Check", font=references.var_font).grid(sticky=W, row=7, column=1, padx=0, pady=0)
+        Button(self, text="Toggle", command=lambda: self.toggle_exp_check()).grid(sticky=E, row=7, column=2, padx=0, pady=0)
         #
         self.retreat_info = Label(self, foreground="#d06000", wraplength=340)  # Low on potions: retreating, or stopped
-        self.retreat_info.grid(sticky=W, row=7, column=0, columnspan=3, padx=10)
+        self.retreat_info.grid(sticky=W, row=8, column=0, columnspan=3, padx=10)
         #
         self.grid_columnconfigure(2, weight=1, uniform="column")
         self.pack(fill=X)
@@ -66,6 +74,10 @@ class BotPanel(LabelFrame):
         values.bot_profile = self.profile_name.get()
         values.bot_profile_version += 1
         save_data.bot_profile.save(values.bot_profile)
+
+    def on_routing_selected(self):  # Where botting goes to fight: see calculations.ROUTING
+        values.routing_mode = next(mode for mode, name in calculations.ROUTING.items() if name == self.routing.get())
+        save_data.routing_mode.save(values.routing_mode)
 
     def edit_profile(self):
         name = self.profile_name.get()

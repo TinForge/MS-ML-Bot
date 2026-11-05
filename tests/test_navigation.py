@@ -163,7 +163,8 @@ class PlanTests(unittest.TestCase):
         piece, next_piece = platform(0, 560, 600), platform(570, 1000, 600)  # One platform recorded in two pieces
         target, beyond = mob_on(540, 600), mob_on(640, 600)  # 40 px wide boxes
         p = navigation.plan(player_at(500), [piece, next_piece, target, beyond], 100)
-        self.assertEqual(p.crowd, [(20, p.dy), (120, p.dy)])  # Edges 20 px nearer than centres; the mob on the next piece is included
+        self.assertEqual(p.crowd, [(20, p.dy, 0), (120, p.dy, 0)])  # Edges 20 px nearer than centres; the mob on the next piece is
+        # included; both stand on the player's ground (feet 0 px apart)
         on_top = navigation.plan(player_at(500), [piece, mob_on(510, 600)], 100)
         self.assertEqual(on_top.crowd[0][0], 0)  # Overlapping the player
 

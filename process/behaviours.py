@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from data import config, values
 from data.profiles import Profile
 from process import kills
+from tools.route_planner import rope_extra_reach
 
 
 @dataclass
@@ -20,19 +21,31 @@ class Situation:  # One tick's view of the game, built from values set by calcul
     now: float = 0
     attack_last_used: dict = field(default_factory=dict)  # Attack name: time it was last used
     target_seen: float = None  # Attack: time.time() of the detection frame the mob was last seen in, None if unknown
-    crowd: list = None  # Attack: (dx, dy) of every mob in reach, the target included
+    crowd: list = None  # Attack: (dx, dy[, feet dy]) of every mob in reach, the target included
     facing: str = None  # Which way the character faces, left or right, None if unknown
+    center_dx: float = 0  # Attack: from the player's centre to the target's, for which way to face a mob overlapping the player
+    player_hidden: bool = False  # The nametag isn't found this frame (plans carry on from where it was last seen)
     kill_check: bool = False  # EXP Kill Check is on and EXP is being read: kills are told from EXP changing, not by waiting gone_delay
     killed_at: float = None  # Grab time of the frame EXP last changed in, None if it hasn't
     ledges: tuple = None  # Attack: (left, right) px from the feet to the ledges of the platform stood on, each None if there's none
 
-    def mobs_ahead(self):  # (distance, height) of the mobs on the target's side or overlapping the player, which an attack facing it can hit
+    def mobs_ahead(self):  # (distance, height[, feet]) of the mobs on the target's side or overlapping the player, which an attack facing
+        # it can hit
         crowd = self.crowd if self.crowd else [(self.dx, self.dy)]
-        side = self.dx or {"left": -1, "right": 1}.get(self.facing, 0)  # Target overlapping: the way the character faces (unknown: both)
-        return [(abs(dx), dy) for dx, dy in crowd if dx * side >= 0]
+        side = {"left": -1, "right": 1}.get(self.attack_direction or self.facing, 0)  # Unknown: both
+        return [(abs(mob[0]),) + tuple(mob[1:]) for mob in crowd if mob[0] * side >= 0]
+
+    @property
+    def attack_direction(self):  # Which way to face to hit the target: toward it; when it overlaps the player, toward its centre, unless
+        # that's within face_deadband (None: as the character faces, so it doesn't turn back and forth over a mob right on it)
+        if self.dx != 0:
+            return self.direction
+        if abs(self.center_dx) > face_deadband:
+            return "left" if self.center_dx < 0 else "right"
+        return None
 
     def mobs_in_reach(self, attack):  # How many mobs an attack aimed at the target would hit
-        return sum(attack.hits(d, h) for d, h in self.mobs_ahead())
+        return sum(attack.hits(*mob) for mob in self.mobs_ahead())
 
     @property
     def last_attack(self):  # When any attack was last used
@@ -61,7 +74,8 @@ class Situation:  # One tick's view of the game, built from values set by calcul
         return cls(state=state, dx=values.debug_x_distance, dy=values.debug_y_distance, on_ladder=values.debug_on_ladder, route=values.debug_route,
                    randomizer=values.randomizer_active, speed=values.player_speed, now=now, attack_last_used=attack_last_used, target_seen=seen,
                    crowd=list(values.debug_crowd or []) if state == "Attack" else None,
-                   ledges=values.debug_ledges if state == "Attack" else None, facing=facing, kill_check=values.exp_check_active and check.usable(now), killed_at=check.changed_at)
+                   ledges=values.debug_ledges if state == "Attack" else None, facing=facing, center_dx=values.debug_center_dx,
+                   player_hidden=values.player_rect is None, kill_check=values.exp_check_active and check.usable(now), killed_at=check.changed_at)
 
 
 @dataclass
@@ -75,6 +89,8 @@ class Action:  # What the executor should do this tick
     label: str = ""  # Shown in the Diagnostics panel
 
 
+run_jump_lead = 0.07  # Seconds of walking a running jump at a rope is started early by: the distance is from a frame that old by the
+# time the jump key goes down, so at full speed it's ~9 px nearer than measured
 rope_run_jump = (20, 55)  # Distance from a rope at which to make a running jump onto it (Up held, still moving): over the rope near
 # the top of the jump. Farther: walk on; closer: line up under it and jump straight up
 jump_move_distance = 450  # With Random Behaviour on, walks farther than this from where they're heading hop along (jump held)
@@ -82,10 +98,17 @@ hop_after = 0.4  # ... once walking the same way this long, at full speed: hoppi
 hop_speed = 80  # ... and moving sideways at least this fast (px/s), when the movement tracker can tell
 jiggle_after = 1.0  # With Random Behaviour on, seconds without finding the player before walking a little back and forth, so the
 jiggle_step = 0.4  # nametag comes out from behind whatever covers it (mobs, effects); seconds each way
-nudge_zone = 20  # Within this distance of a spot to line up on (under a rope), tap the arrow instead of walking: walking overshoots
+hidden_jiggle_after = 2.0  # Seconds with the nametag missing and nothing to do (stopped or waiting) before jiggling the same way, with or
+# without Random Behaviour: the plan carries on from where the player was last seen, which can leave it stuck (under a rope's top)
+nudge_zone = 40  # Within this distance of a spot to line up on (under a rope), tap the arrow instead of walking: walking overshoots,
+# and the character slides on a few pixels after stopping, so it paced back and forth under the rope
 reverse_delay = 0.3  # Seconds after walking one way before walking the other, so a frame or two of jitter can't flip the character
 rope_grab_time = 0.8  # Seconds after jumping at a rope to keep holding Up, not jump again: a second jump would leave the rope it caught
 new_target_gap = 1.5  # Seconds without attacking after which the next target counts as a new mob
+close_in_distance = 60  # A ready mobbing attack with enough mobs within its reach plus this steps forward to bring them into it
+close_in_time = 0.8  # ... for up to this long, so mobs drifting off don't keep it walking instead of attacking
+face_deadband = 10  # A mob overlapping the player with its centre further than this to one side is faced; nearer, the facing is kept.
+# Keeping it for any overlapping mob swung the wrong way at one mostly behind the player (walked through it, knocked back past it)
 new_target_shift = 60  # How far the target may move between attacks (knockback, walking) and still be the same mob
 ledge_margin = config.ledge_margin  # While fighting, px kept from a ledge that a mob's hits would knock the player off; backing away
 # from a mob stops at twice this, so the two never undo each other
@@ -101,6 +124,9 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
         self.rope_jump = -1e9  # When it last jumped at a rope, for rope_grab_time
         self.lost_since = None  # When the player was last lost from view, for jiggle_after
         self.jiggle_first = "left"  # Which way a jiggle starts, picked at random each time
+        self.closing_since = None  # When it started stepping forward to bring mobs into a mobbing attack's reach (close_in)
+        self.idle_hidden_since = None  # When it started doing nothing with the nametag missing, for hidden_jiggle_after
+        self.jiggle_start = None  # When the jiggle for a missing nametag started, None when not jiggling
 
     def same_target(self, s: Situation):  # Whether the target is the mob attacked last
         if self.last_target is None:
@@ -117,7 +143,7 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
         return find(abs(s.dx), s.dy, s.attack_last_used, s.now, new_target=self.new_target(s), mobs=s.mobs_ahead())
 
     def decide(self, s: Situation) -> Action:
-        action = self.choose(s)
+        action = self.unhide(s, self.choose(s))
         if action.kind == "move":  # Walking back the way it just came within reverse_delay: settle first
             direction, when = self.last_walk
             if direction is not None and action.direction != direction and s.now - when < reverse_delay:
@@ -135,6 +161,21 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
         if s.state == "Search":  # The nametag is usually just covered for a moment: wait (pressing Up here used to grab ropes)
             return self.search(s)
         return Action("wait", label="nothing")
+
+    def unhide(self, s: Situation, action: Action) -> Action:  # The nametag missing, with nothing to do, for hidden_jiggle_after: walk
+        # a little back and forth instead until it's found, so it comes out from behind whatever covers it. Anything to do comes first
+        if not s.player_hidden or action.kind not in ("stop", "wait"):
+            self.idle_hidden_since = self.jiggle_start = None
+            return action
+        if self.jiggle_start is None:
+            if self.idle_hidden_since is None:
+                self.idle_hidden_since, self.jiggle_first = s.now, random.choice(("left", "right"))
+            if s.now - self.idle_hidden_since < hidden_jiggle_after:
+                return action
+            self.jiggle_start = s.now
+        turned = int((s.now - self.jiggle_start) / jiggle_step) % 2
+        direction = self.jiggle_first if not turned else ("right" if self.jiggle_first == "left" else "left")
+        return Action("move", direction, label="nametag hidden: jiggling")
 
     def search(self, s: Situation) -> Action:  # Player not found: wait, then with Random Behaviour on, walk a little back and forth
         if self.lost_since is None:
@@ -182,10 +223,28 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
             if not killed and seen < landed + (kills.exp_wait if s.kill_check else self.profile.gone_delay):
                 return Action("stop", label="checking EXP" if s.kill_check else "checking the mob is gone")
         self.last_target = (s.now, s.dx, s.dy)
-        direction = s.direction if s.dx != 0 else None  # Overlapping the character: keep facing as is, or it turns back and forth over it
+        direction = s.attack_direction
         mobbing = [a for a in self.profile.attacks if a.min_mobs > 1]
         counted = " (%d in mobbing reach)" % s.mobs_in_reach(mobbing[0]) if mobbing else ""  # For tuning hit_range in Diagnostics
         return Action(kind, direction, attack=attack, label=label + attack.name + counted)
+
+    def close_in(self, s: Situation):  # A ready mobbing attack, with enough mobs just past its reach on the side being hit: step forward
+        # until they're in it, so one swing hits them all instead of picking them off one at a time. None to attack as usual
+        side = s.attack_direction
+        if side is not None and side == s.direction:  # Toward the target, never past it the other way
+            ahead = s.mobs_ahead()
+            for attack in self.profile.ready_attacks(s.attack_last_used, s.now):
+                if attack.min_mobs < 2 or sum(attack.hits(*mob) for mob in ahead) >= attack.min_mobs:  # Not mobbing, or already in reach
+                    continue
+                if sum(attack.hits(max(0, mob[0] - close_in_distance), *mob[1:]) for mob in ahead) < attack.min_mobs:
+                    continue
+                if self.closing_since is None:
+                    self.closing_since = s.now
+                if s.now - self.closing_since > close_in_time:  # They're not coming into reach: attack as usual
+                    return None
+                return self.walk(s, side, "closing in for " + attack.name)
+        self.closing_since = None
+        return None
 
     def approach(self, s: Situation):  # Fastest way to close the distance
         mobility = self.profile.mobility_for(abs(s.dx))
@@ -209,8 +268,10 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
     def navigate(self, s: Situation) -> Action:
         p = self.profile
         distance = abs(s.dx)
-        if s.route == "climb":  # On a rope: hold Up until off at the top
-            return Action("climb", label="climbing")
+        reach = p.platform_height + (rope_extra_reach if s.on_ladder else 0)  # A rope is caught with the hands, above the feet: as high as
+        # the route planner counts on. Only platform_height left the bot standing under ropes the planner had routed it to
+        if s.route == "climb":  # On a rope: hold Up until off at the top, and the arrow toward the platform there (dx), to walk off
+            return Action("climb", s.direction if s.dx != 0 else None, label="climbing")
         if s.route == "jump_off":  # Off the rope sideways: toward a mob below, or because the climb got stuck
             return Action("jump_off", s.direction, label="jumping off the rope")
         if s.route == "up" and s.on_ladder and s.now - self.rope_jump < rope_grab_time:  # Just jumped at it: hold on, don't jump again
@@ -223,18 +284,20 @@ class Behaviour:  # Shared by every style: navigating between platforms and sear
             return Action("drop", label="drop down")
         if s.route == "walk":  # Head for a mob on another platform without jumping
             return self.walk(s, s.direction, "move towards mob")
-        if s.on_ladder and rope_run_jump[0] <= distance <= rope_run_jump[1] and s.dy < p.platform_height:  # Running jump, grabbing it in the air
+        toward = max(0.0, (s.speed or 0.0) * (1 if s.dx > 0 else -1))  # Sideways speed toward the rope, px/s
+        if s.on_ladder and rope_run_jump[0] <= distance and distance - toward * run_jump_lead <= rope_run_jump[1] and s.dy < reach:  # Running
+            # jump, grabbing it in the air
             self.rope_jump = s.now
             return Action("move_jump", s.direction, up=True, label="running jump onto the rope")
         if s.on_ladder and 0 < distance <= nudge_zone:  # Right by the rope: small taps line up without overshooting
             return Action("nudge", s.direction, label="lining up with the rope")
         if distance > p.platform_range or (s.on_ladder and distance > 0):  # A rope is only caught by jumping straight up under it
             return self.walk(s, s.direction, "move to the rope" if s.on_ladder else "move closer")
-        if distance == 0 and s.dy < p.platform_height:
+        if distance == 0 and s.dy < reach:
             if s.on_ladder:
                 self.rope_jump = s.now
             return Action("jump", up=s.on_ladder, label="jump onto the rope" if s.on_ladder else "jump")
-        if distance < p.platform_range and s.dy < p.platform_height:
+        if distance < p.platform_range and s.dy < reach:
             return Action("move_jump", s.direction, up=s.on_ladder, label="moving jump")
         return Action("wait", label="platform out of reach")
 
@@ -245,6 +308,9 @@ class MeleeBehaviour(Behaviour):  # Close in, attack, jump attack mobs slightly 
         distance, height = abs(s.dx), s.dy
         if p.mobility_for(distance) is not None:
             return self.approach(s)
+        closing = self.close_in(s)
+        if closing is not None:
+            return closing
         attack = self.pick_attack(s)
         if attack is not None:
             return self.strike(s, "attack", attack, "attack: ")

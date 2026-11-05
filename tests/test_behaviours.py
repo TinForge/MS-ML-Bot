@@ -266,16 +266,34 @@ class ExecutorTests(unittest.TestCase):
     def test_attack_uses_profile_key_and_records_use(self):
         p = profiles.load("hunter")
         e, presses = self.run_action("hunter", behaviours.Action("attack", "right", attack=p.attacks[0]))
-        self.assertEqual(presses, [keyboard.VK_RIGHT, keyboard.VK_SHIFT])  # Face right, then Arrow Bomb on Shift
+        self.assertEqual(presses, [keyboard.VK_RIGHT, keyboard.VK_SHIFT])  # Right held, then Arrow Bomb on Shift
         self.assertIn("Arrow Bomb", e.attack_last_used)
 
-    def test_turns_only_when_facing_changes(self):  # Each arrow tap also walks a step
+    def test_faces_the_mob_on_every_attack(self):  # The facing it keeps track of goes stale (knockback, off a rope), so it never relies on it
         p = profiles.load("swordsman")
-        e, presses = self.run_action("swordsman", behaviours.Action("attack", "right", attack=p.attacks[-1]))
-        with mock.patch.object(keyboard, "PressKey", lambda k: presses.append(k)),                 mock.patch.object(keyboard, "ReleaseKey", lambda k: None), mock.patch("time.sleep"):
+        e = executor.Executor(p)
+        events = []
+        with mock.patch.object(keyboard, "PressKey", lambda k: events.append(("down", k))),                 mock.patch.object(keyboard, "ReleaseKey", lambda k: events.append(("up", k))), mock.patch("time.sleep"):
+            for direction in ("right", "right", "left"):
+                e.run(behaviours.Action("attack", direction, attack=p.attacks[-1]))
+            e.run(behaviours.Action("attack", None, attack=p.attacks[-1]))  # Mob overlapping: as it faces
+        right, left, ctrl = keyboard.VK_RIGHT, keyboard.VK_LEFT, keyboard.VK_CONTROL
+        swing = lambda arrow: [("down", arrow), ("down", ctrl), ("up", ctrl), ("up", arrow)]  # The arrow held through the attack key
+        self.assertEqual(events, swing(right) + swing(right) + swing(left) + [("down", ctrl), ("up", ctrl)])
+
+    def test_no_walking_while_waiting_between_human_taps(self):  # The gap between taps is waited out before the arrow goes down
+        p = profiles.load("swordsman")
+        e = executor.Executor(p)
+        events, clock = [], [100.0]
+
+        def sleep(seconds):
+            events.append(("sleep", round(seconds, 3)))
+            clock[0] += seconds
+        e.next_press = 100.2
+        with mock.patch.object(keyboard, "PressKey", lambda k: events.append(("down", k))),                 mock.patch.object(keyboard, "ReleaseKey", lambda k: events.append(("up", k))), mock.patch("time.sleep", sleep),                 mock.patch("time.time", lambda: clock[0]), mock.patch.object(values, "human_input", True):
             e.run(behaviours.Action("attack", "right", attack=p.attacks[-1]))
-            e.run(behaviours.Action("attack", "left", attack=p.attacks[-1]))
-        self.assertEqual(presses, [keyboard.VK_RIGHT, keyboard.VK_CONTROL, keyboard.VK_CONTROL, keyboard.VK_LEFT, keyboard.VK_CONTROL])
+        self.assertEqual(events[0], ("sleep", 0.2))  # Waited first...
+        self.assertEqual(events[1], ("down", keyboard.VK_RIGHT))  # ...then the arrow
 
     def test_loot_key_rate_limited(self):  # Pressed every bot tick it reached ~75 a second and froze the game client
         e = executor.Executor(profiles.load("swordsman"))
@@ -346,9 +364,28 @@ class ExecutorTests(unittest.TestCase):
             e.run(behaviours.Action("jump", up=True))
             e.run(behaviours.Action("climb"))
             self.assertNotIn(("up", keyboard.VK_UP), events)  # Still held, onto the rope and up it
-            e.run(behaviours.Action("stop"))
+            with mock.patch("time.time", lambda: e.up_until + 0.01):
+                e.run(behaviours.Action("stop"))
         self.assertEqual(events[-1], ("up", keyboard.VK_UP))
         self.assertFalse(e.holding_up)
+
+    def test_up_stays_held_while_still_reaching_the_rope(self):  # Plans made mid-air may not be "climb" yet
+        p = profiles.load("swordsman")
+        for kind in ("jump", "move_jump"):
+            e = executor.Executor(p)
+            with mock.patch.object(keyboard, "PressKey"), mock.patch.object(keyboard, "ReleaseKey"), mock.patch("time.sleep"):
+                e.run(behaviours.Action(kind, "right", up=True))
+                for action in (behaviours.Action("move", "right"), behaviours.Action("stop"), behaviours.Action("wait")):
+                    e.run(action)
+                    self.assertTrue(e.holding_up, (kind, action.kind))
+                e.run(behaviours.Action("attack", "right", attack=p.attacks[-1]))  # Attacks let go: Up could change the skill
+                self.assertFalse(e.holding_up)
+            e = executor.Executor(p)
+            with mock.patch.object(keyboard, "PressKey"), mock.patch.object(keyboard, "ReleaseKey"), mock.patch("time.sleep"):
+                e.run(behaviours.Action(kind, "right", up=True))
+                with mock.patch("time.time", lambda: e.up_until + 0.01):
+                    e.run(behaviours.Action("move", "right"))  # Missed it: let go, so walking past a portal doesn't go through
+                self.assertFalse(e.holding_up)
 
     def test_no_quick_turning_back(self):  # Jitter in the target's side used to flip the character left and right
         b = behaviours.for_profile(profiles.load("swordsman"))
@@ -418,6 +455,65 @@ class ExecutorTests(unittest.TestCase):
             e.move(keyboard.VK_LEFT)
             e.stop_moving()
         self.assertEqual((released, e.held_direction), ([keyboard.VK_LEFT], None))
+
+
+class FacingTests(unittest.TestCase):  # Which way an attack faces
+    def attack(self, dx, center_dx, facing="right"):
+        return decide("swordsman", state="Attack", dx=dx, dy=0, now=10.0, target_seen=10.0, center_dx=center_dx, facing=facing)
+
+    def test_faces_a_mob_mostly_behind_it(self):  # Walked through it, or knocked back past it: its box still covers the player
+        a = self.attack(0, -30)
+        self.assertEqual((a.kind, a.direction), ("attack", "left"))
+
+    def test_keeps_facing_for_a_mob_right_on_it(self):  # Turning for every few pixels would swing back and forth over it
+        self.assertIsNone(self.attack(0, 6).direction)
+        self.assertIsNone(self.attack(0, -6).direction)
+
+    def test_faces_a_mob_in_front_by_its_edge(self):
+        self.assertEqual(self.attack(-40, -70).direction, "left")
+
+    def test_mobbing_counts_mobs_the_way_it_will_face(self):
+        s = Situation(state="Attack", dx=0, center_dx=-30, crowd=[(0, 0), (-60, 0), (60, 0)], facing="right")
+        self.assertEqual(sorted(s.mobs_ahead()), [(0, 0), (60, 0)])  # Left: the target and the one beyond it, not the one behind
+
+
+class MobbingTests(unittest.TestCase):  # The fixture swordsman's "Mobbing attack": 2 mobs within 100 px, range_y -30 to 25
+    def setUp(self):
+        self.behaviour = behaviours.for_profile(profiles.load("swordsman"))
+
+    def decide(self, crowd, now=10.0, dx=50, used=None):
+        return self.behaviour.decide(Situation(state="Attack", dx=dx, dy=0, now=now, target_seen=now, crowd=crowd, attack_last_used=used or {},
+                                               facing="right"))
+
+    def test_closes_in_on_a_group_just_out_of_reach(self):  # One near, two just past the attack's reach: step up and hit all three
+        a = self.decide([(50, 0, 0), (130, 0, 0), (150, 0, 0)])
+        self.assertEqual((a.kind, a.direction, a.label), ("move", "right", "closing in for Mobbing attack"))
+
+    def test_attacks_once_they_are_in_reach(self):
+        self.assertEqual(self.decide([(30, 0, 0), (90, 0, 0)]).attack.name, "Mobbing attack")
+
+    def test_gives_up_closing_in_when_they_dont_come_into_reach(self):
+        self.decide([(50, 0, 0), (130, 0, 0)], now=10.0)
+        a = self.decide([(50, 0, 0), (130, 0, 0)], now=10.0 + behaviours.close_in_time + 0.1)
+        self.assertEqual(a.kind, "attack")  # Picks off the near one instead
+        self.assertNotEqual(a.attack.name, "Mobbing attack")
+
+    def test_no_closing_in_for_a_lone_mob_or_one_far_off(self):
+        self.assertEqual(self.decide([(50, 0, 0)]).kind, "attack")
+        self.assertEqual(self.decide([(50, 0, 0), (200, 0, 0)]).kind, "attack")
+
+    def test_no_closing_in_while_the_mobbing_attack_cools_down(self):
+        cooling = profiles.from_dict("test", {"attacks": [
+            {"name": "Mobbing", "key": "Shift", "range_x": [0, 75], "range_y": [-30, 25], "min_mobs": 2, "hit_range": 100, "cooldown": 5},
+            {"name": "Basic", "key": "Ctrl", "range_x": [0, 75], "range_y": [-30, 25]}]})
+        b = behaviours.for_profile(cooling)
+        a = b.decide(Situation(state="Attack", dx=50, now=10.0, target_seen=10.0, crowd=[(50, 0, 0), (130, 0, 0)],
+                               attack_last_used={"Mobbing": 8.0}))
+        self.assertEqual((a.kind, a.attack.name), ("attack", "Basic"))
+
+    def test_tall_mobs_on_the_same_ground_count(self):  # Its centre is far above the player's, but it stands right there
+        self.assertEqual(self.decide([(50, 0, 0), (80, 45, 0)]).attack.name, "Mobbing attack")
+        self.assertNotEqual(self.decide([(50, 0, 0), (80, 45, 60)]).attack.name, "Mobbing attack")  # On a platform above: not hit
 
 
 if __name__ == "__main__":

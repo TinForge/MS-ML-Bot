@@ -82,6 +82,7 @@ class BotThread(threading.Thread):
         self.profile = profile
         values.nav_jump_height = profile.platform_height  # Used by navigation to decide which platforms are in reach
         values.nav_clump_range = profile.clump_range  # Used by navigation to prefer bunched-up mobs
+        values.nav_attack_range = profile.max_range  # Used by Patrol: mobs it fights on the way down without going after them
         self.behaviour = behaviours.for_profile(profile)
         self.executor = executor.Executor(profile)
 

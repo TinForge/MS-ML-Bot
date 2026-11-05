@@ -28,6 +28,7 @@ mp_potion_threshold = TextFile('MP POTION THRESHOLD', '0')
 hp_potion_key = TextFile('HP POTION KEY', 'Delete')
 mp_potion_key = TextFile('MP POTION KEY', 'End')
 bot_profile = TextFile('BOT PROFILE', 'spearman')
+routing_mode = TextFile('ROUTING MODE', 'hunt')
 
 
 def main():

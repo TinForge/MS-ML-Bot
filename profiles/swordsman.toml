@@ -37,3 +37,6 @@ jump_attack = true
 jump_reach = 75
 
 # No [[mobility]]: without a dash the bot walks to far-away mobs
+
+[movement]
+platform_height = 95

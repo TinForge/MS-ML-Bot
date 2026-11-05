@@ -87,6 +87,39 @@ class RoutePlannerTests(unittest.TestCase):
             self.assertLess(time.perf_counter() - started, 1.0)
 
 
+class JumpReachTests(unittest.TestCase):  # A 75 px jump, as in MapleStory: the higher it lands, the less far sideways it carries
+    def jumps(self, other, jump_height=75):  # Hops from a floor (x 0-300 at y 600) to the other platform
+        r = RoutePlanner([[(0, 600), (300, 600)], other], [], jump_height)
+        return [(h.x1, h.x2) for h in r.hops[0] if h.kind == "jump"]
+
+    def test_no_higher_than_the_jump(self):
+        self.assertTrue(self.jumps([(100, 530), (250, 530)]))  # 70 up, overhead
+        self.assertFalse(self.jumps([(100, 520), (250, 520)]))  # 80 up: out of reach (it was allowed up to 100)
+        self.assertTrue(self.jumps([(100, 520), (250, 520)], jump_height=90))  # A character that jumps higher
+
+    def test_across_a_gap(self):
+        self.assertTrue(self.jumps([(350, 600), (600, 600)]))  # 50 px gap: ~58 px reach
+        self.assertFalse(self.jumps([(370, 600), (600, 600)]))  # 70 px gap: too far (it was allowed up to 60 past the end)
+
+    def test_less_far_the_higher_it_lands(self):
+        self.assertTrue(self.jumps([(330, 560), (600, 560)]))  # 40 up, 30 px past the end
+        self.assertFalse(self.jumps([(345, 530), (600, 530)]))  # 70 up, 45 px past: falls short (~37 px at that height)
+        self.assertTrue(self.jumps([(330, 530), (600, 530)]))  # 70 up, 30 px past
+
+    def test_takeoff_only_from_where_it_makes_it(self):
+        [(x1, x2)] = self.jumps([(330, 530), (600, 530)])
+        self.assertGreaterEqual(x1, 330 - 38)  # Within reach of the edge it lands on
+        self.assertAlmostEqual(x2, 300, delta=8)  # Up to the floor's end (on the planner's 8 px grid)
+
+    def test_bot_walks_to_the_takeoff_before_jumping(self):  # It used to jump as soon as the platform was within platform_range
+        target = PlatformLine([(330, 530), (600, 530)])
+        step = navigation.Step("jump", target, 296, 300)
+        far = navigation.step_plan(Rect("Player", "blue", 225, 534, 275, 600, 1), step, None, None)  # Feet at 250
+        self.assertEqual((far.route, far.dx), ("walk", 46))
+        there = navigation.step_plan(Rect("Player", "blue", 273, 534, 323, 600, 1), step, None, None)  # Feet at 298
+        self.assertEqual(there.route, "up")
+
+
 class NavigationRouteTests(unittest.TestCase):  # Screen coords: the made-up map drawn as is, the player on the ground
     def player(self, x, feet=600):
         return Rect("Player", "blue", x - 25, feet - 66, x + 25, feet, 1)

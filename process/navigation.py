@@ -27,7 +27,8 @@ class Plan:
     dy: float = 0  # How far the target is above the player
     on_ladder: bool = False  # Navigate target is a ladder
     platform: object = None  # Platform the player stands on
-    crowd: list = None  # Attack: (dx to the mob's nearer edge, dy) of every mob on screen, the target included, for mobbing attacks
+    crowd: list = None  # Attack: (dx to the mob's nearer edge, dy between centres, feet dy) of every mob on screen, the target included,
+    # for mobbing attacks
     goal: object = None  # Mob the route leads towards
 
 
@@ -51,7 +52,8 @@ def plan(player, instances, jump_height, clump_range=150, previous=None, explore
     local_mobs = rects.find_mobs_on_platform(mobs, platform) if platform is not None else mobs
     mob = pick_target(local_mobs, player, clump_range, previous)
     if mob is not None:
-        crowd = [(near_edge_dx(m, player), player.center_y - m.center_y) for m in mobs]  # Every mob: range_y decides which levels it hits
+        crowd = [(near_edge_dx(m, player), player.center_y - m.center_y, player.y2 - m.y2) for m in mobs]  # Every mob: range_y decides
+        # which levels it hits
         dx = near_edge_dx(mob, player)  # 0 when the mob overlaps the player: attacked whichever way the character faces
         return Plan("Attack", mob, dx=dx, dy=player.center_y - mob.center_y, platform=platform, crowd=crowd)
 
@@ -95,7 +97,11 @@ def step_plan(player, step, platform, goal):  # Turns a route's step into the mo
             left = right = (step.x1 + step.x2) / 2
         dx = 0 if left <= x <= right else (left - x if x < left else right - x)
         return Plan("Navigate", step.target, route="down", dx=dx, dy=player.y2 - step.target.top_at(x + dx), platform=platform, goal=goal)
-    return up_plan(player, step.target, platform, goal)  # A jump or a rope
+    if step.kind == "jump" and not step.x1 <= player.center_x <= step.x2:  # Not yet where the planner found the jump makes it from:
+        # walk there first. Jumping as soon as the platform was near (platform_range from its edge) fell short of high or far ones
+        x = step.x1 if player.center_x < step.x1 else step.x2
+        return Plan("Navigate", step.target, route="walk", dx=x - player.center_x, platform=platform, goal=goal)
+    return up_plan(player, step.target, platform, goal)  # A jump (from where it makes it) or a rope
 
 
 def explore_plan(instances, platforms, player, platform, jump_height, direction, skip=()):  # No mobs in sight. Exploring, head for the

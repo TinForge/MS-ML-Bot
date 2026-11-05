@@ -3,6 +3,7 @@
 
 import bisect
 import json
+import math
 import os
 import warnings
 from collections import deque
@@ -28,6 +29,8 @@ consolidate_height = 12  # Ground heights in a column this close are merged: the
 min_line_samples = 3  # Samples a platform line needs, so a stray reading never becomes a platform but one walk along it does
 min_line_width = 24  # Narrowest platform kept: real ones are far wider, slivers this thin were recorded while hanging on a rope
 max_gap = 3  # Empty columns a platform line may jump over (unrecorded bits, not real gaps)
+rope_gap = 48  # Pixels of gap a platform line bridges where a rope crosses it, at the same height on both sides: no ground is recorded
+# right by a rope (hanging on it isn't standing), nor in the moment before jumping onto it, which split platforms in two there
 ladder_merge = 40  # Rope readings this close sideways continue a rope (ropes are rarely anywhere near each other; climbing readings
 # wander more than a few pixels, and at 8 px one rope was recorded as two side by side)...
 ladder_gap = 30  # ... if they're also within this of its height range: ropes at the same x on different floors stay apart
@@ -77,6 +80,14 @@ def without_duplicates(lines):  # Drops pieces that lie along a longer platform,
         if not duplicate:
             kept.append(line)
     return [line for line in lines if any(line is k for k in kept)]  # In the order they were found
+
+
+def snap_scale(scale):  # The minimap is the map shrunk by a power of two (16 on most maps, 8 on some), but measuring it through the
+    # camera tracker (which the backgrounds' parallax sways) came out 12-19: far platforms were drawn up to a fifth of their distance out.
+    # None for a measurement that makes no sense (negative), to measure again
+    if scale is None or scale <= 0:
+        return None
+    return 2.0 ** round(math.log2(scale))
 
 
 def consolidate(column):  # Merges ground heights in a column that are within consolidate_height: one ground recorded twice.
@@ -136,7 +147,7 @@ class Calibration:  # Relates camera coords (reset each session) to map coords: 
                 w, m = s[:, axis] - s[:, axis].mean(), s[:, axis + 2] - s[:, axis + 2].mean()
                 num, den = num + (w * m).sum(), den + (m * m).sum()
         if den > 0:
-            self.scale = num / den
+            self.scale = snap_scale(num / den)
 
     def anchor(self):
         recent = np.array(list(self.samples)[-anchor_samples * 4:])
@@ -271,6 +282,18 @@ class PlatformMap:  # Ground and ladders recorded on one map
                 runs.append((current, points))
         return runs
 
+    def rescale(self, factor):  # Map coords multiplied by factor (ground, its mob statistics, ropes)
+        old, self.ground = self.ground, {}
+        if old:  # Each new column from the old one under it, so stretched ground has no gaps between columns
+            for b in range(int(min(old) * factor) - 1, int((max(old) + 1) * factor) + 2):
+                source = old.get(int((b + 0.5) / factor))
+                if source:
+                    self.ground[b] = [[c[0] * factor] + list(c[1:]) for c in source]
+        for ladder in self.ladders:
+            ladder["x"], ladder["top"], ladder["bottom"] = ladder["x"] * factor, ladder["top"] * factor, ladder["bottom"] * factor
+        self.merge_ladders()
+        self.dirty = True
+
     def stretches(self, line, safety, min_width=0):  # (x1, x2) of each stretch of a platform line with that safety, at least min_width
         return [(points[0][0], points[-1][0]) for s, points in self.safety_runs([line]) if s == safety and points[-1][0] - points[0][0] >= min_width]
 
@@ -305,6 +328,7 @@ class PlatformMap:  # Ground and ladders recorded on one map
         counts = {(b, c[0]): c[1] for b, column in self.ground.items() for c in column}
         columns = {b: sorted(c[0] for c in column) for b, column in self.ground.items()}
         points = sorted((b, y) for b, ys in columns.items() for y in ys)
+        rope_columns = sorted(int(ladder["x"] // bin_size) for ladder in self.confirmed_ladders())
         used = set()
         lines = []
         for start in points:
@@ -322,6 +346,15 @@ class PlatformMap:  # Ground and ladders recorded on one map
                         if (nb, ys[i]) not in used:
                             nexts.append((nb, ys[i]))
                         i += 1
+                if not nexts:  # A wider gap: bridged only where a rope crosses it, and level across
+                    for nb in range(b + max_gap + 2, b + int(rope_gap // bin_size) + 2):
+                        i = bisect.bisect_left(rope_columns, b + 1)
+                        if i == len(rope_columns) or rope_columns[i] >= nb:
+                            continue
+                        ys = columns.get(nb, ())
+                        nexts += [(nb, other) for other in ys if abs(other - y) <= merge_height and (nb, other) not in used]
+                        if nexts:
+                            break
                 if not nexts:
                     break
                 step = min(nexts, key=lambda p: (p[0] - b, abs(p[1] - y)))
@@ -399,8 +432,11 @@ class Mapper:  # Follows the player through the camera and minimap, and records 
                 data = json.load(f)
         except (OSError, ValueError):
             data = {}
-        self.calibration = Calibration(data.get("scale"))
+        saved = data.get("scale")
+        self.calibration = Calibration(snap_scale(saved))
         self.platforms = PlatformMap.from_json(data)
+        if self.calibration.scale is not None and saved != self.calibration.scale:  # Recorded with the scale as measured: resized to the
+            self.platforms.rescale(self.calibration.scale / saved)  # true one, which map coords are in proportion to
         self.publish()
 
     def save(self):

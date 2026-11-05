@@ -1,6 +1,7 @@
 # Tests for calibration and platform recording, using made-up movement in map coords (y grows downwards)
 
 import json
+import os
 import tempfile
 import unittest
 from unittest import mock
@@ -8,7 +9,7 @@ from unittest import mock
 from tools import map_recorder
 from tools.map_recorder import Calibration, Mapper, PlatformMap
 
-SCALE = 10.0  # Game pixels per minimap pixel in these tests
+SCALE = 16.0  # Game pixels per minimap pixel in these tests: a power of two, as in the game
 
 
 def minimap_at(x, y):  # Minimap dot position for a map position: coarse, in half-pixel steps like real dot centres
@@ -83,6 +84,70 @@ class RopeTests(unittest.TestCase):
             m.add_ladder(500, y)
         self.assertTrue(m.on_ladder(504, 450))
         self.assertFalse(m.on_ladder(520, 450))
+
+
+class ScaleTests(unittest.TestCase):  # The minimap is the map shrunk by a power of two
+    def test_measured_scales_snap_to_a_power_of_two(self):
+        snapped = [map_recorder.snap_scale(s) for s in (12.42, 13.52, 15.96, 17.22, 19.39, 7.93)]
+        self.assertEqual(snapped, [16, 16, 16, 16, 16, 8])  # As measured on real maps, and what they really are
+        self.assertIsNone(map_recorder.snap_scale(-5.09))  # Nonsense: measured again
+        self.assertIsNone(map_recorder.snap_scale(None))
+
+    def test_recording_made_with_an_off_scale_is_resized(self):
+        folder = tempfile.mkdtemp()
+        with mock.patch.object(map_recorder, "folder", folder):
+            m = PlatformMap()
+            for _ in range(3):
+                for x in range(130, 520, 2):  # A platform from 130 to 520 at height 390, as recorded with a scale of 13 (true: 16)
+                    m.add_ground(x, 390)
+            for y in range(130, 390, 3):
+                m.add_ladder(260, y)
+            m.see((0, 0, 1366, 768), [(300, 340, 390)], map_recorder.learn_time * 2)
+            os.makedirs(os.path.join(folder, "test"))
+            with open(os.path.join(folder, "test", "platforms.json"), "w") as f:
+                json.dump({"scale": 13.0, **m.to_json()}, f)
+            mapper = Mapper()
+            mapper.switch("test")
+        self.assertEqual(mapper.calibration.scale, 16)
+        f = 16 / 13
+        [line] = mapper.lines
+        self.assertAlmostEqual(line[0][0], 130 * f, delta=6)
+        self.assertAlmostEqual(line[-1][0], 520 * f, delta=6)
+        self.assertAlmostEqual(line[0][1], 390 * f, delta=1)
+        [rope] = mapper.ladders
+        self.assertAlmostEqual(rope["x"], 260 * f, delta=1)
+        self.assertAlmostEqual(rope["top"], 130 * f, delta=4)
+        self.assertEqual(mapper.platforms.safety_at(320 * f, 390 * f), map_recorder.BUSY)  # Mob statistics moved with it
+        self.assertTrue(mapper.platforms.dirty)  # Saved resized
+
+
+class RopeGapTests(unittest.TestCase):  # No ground is recorded right by a rope, nor just before jumping onto it
+    def recorded(self, gap=(480, 512), right_height=500, rope=True):
+        m = PlatformMap()
+        for _ in range(3):
+            for x in range(200, 800, 2):
+                if not gap[0] <= x < gap[1]:
+                    m.add_ground(x, 500 if x < gap[0] else right_height)
+        if rope:
+            for y in range(300, 700, 3):  # Through the platform, from above it to below
+                m.add_ladder(496, y)
+        return m
+
+    def test_platform_joined_across_a_rope(self):
+        lines = self.recorded().platforms()
+        self.assertEqual(len(lines), 1)
+        self.assertEqual((round(lines[0][0][0]), round(lines[0][-1][0])), (202, 798))
+        from tools.route_planner import RoutePlanner
+        self.assertEqual(len(RoutePlanner(lines, [], 100).lines), 1)  # One platform for routing too
+
+    def test_gap_without_a_rope_stays(self):  # A real hole
+        self.assertEqual(len(self.recorded(rope=False).platforms()), 2)
+
+    def test_not_joined_to_ground_at_another_height(self):  # A step down beside the rope
+        self.assertEqual(len(self.recorded(right_height=530).platforms()), 2)
+
+    def test_too_wide_a_gap_stays(self):
+        self.assertEqual(len(self.recorded(gap=(470, 530)).platforms()), 2)
 
 
 class EraseTests(unittest.TestCase):  # Debug panel's Erase: cleaning up bad recording by going over it
@@ -338,14 +403,14 @@ class MapperTests(unittest.TestCase):
         mapper.update(None, frame_rect, player, FakeMinimap(None), 0.1, True)
         self.assertEqual(mapper.status, "minimap dot not found")
         for i in range(10):  # Climbing: the dot moves 5 minimap px
-            mapper.camera.position = (0, -i * 5)
+            mapper.camera.position = (0, -i * 8)
             mapper.update(None, frame_rect, player, FakeMinimap((50, 50 - i * 0.5)), 0.2 + i / 30, True)
         self.assertIn("dot moved 4 of 12 px, 10 of 40 readings", mapper.status)
         for i in range(10, 60):  # On up the rope
-            mapper.camera.position = (0, -i * 5)
+            mapper.camera.position = (0, -i * 8)
             mapper.update(None, frame_rect, player, FakeMinimap((50, 50 - i * 0.5)), 0.2 + i / 30, True)
         self.assertIsNone(mapper.status)  # Lined up: the panel shows the platform count
-        self.assertAlmostEqual(mapper.calibration.scale, 10, delta=0.5)  # Measured from going up alone
+        self.assertEqual(mapper.calibration.scale, 16)  # Measured from going up alone
 
     def test_walking_off_a_ledge_records_nothing_past_it(self):  # The first frames of the fall still look like walking
         for rate in (18, 30):
@@ -366,7 +431,8 @@ class MapperTests(unittest.TestCase):
             self.assertEqual(len(ledge), 1)
             self.assertLessEqual(ledge[0][-1][0], 500 + map_recorder.bin_size, rate)  # Ends at the ledge
             self.assertGreater(ledge[0][-1][0], 500 - 30, rate)  # Only a little short of it: what was held when it fell
-            self.assertTrue(all(abs(y - 500) < 2 for _, y in ledge[0]), rate)  # Not sagging into the fall
+            self.assertTrue(all(abs(y - 500) <= SCALE / 4 + 1 for _, y in ledge[0]), rate)  # Not sagging into the fall (within the
+            # wobble of the minimap dot's half-pixel steps)
 
     def test_records_walked_platforms_and_climbed_ladder(self):
         mapper = Mapper()

@@ -14,9 +14,13 @@ climb_speed = 100.0  # Map px/s climbing a rope
 drop_time = 0.7  # Seconds for a drop: down-jump, fall, land
 jump_time = 0.9  # Seconds for a jump up or across: lining up, jumping, landing
 rope_time = 0.8  # Seconds getting onto a rope and off at the top, besides climbing
-jump_reach = 60  # How far past a platform's end a jump reaches sideways
+gravity = 2000.0  # px/s² pulling the character down mid-jump (MapleStory's physics)
+jump_margin = 0.85  # Share of a jump's full sideways reach counted on: the takeoff point and speed are never exact
+max_jump_reach = 80  # Room left beside the recorded map for jumps past its ends (more than any jump reaches)
 fall_reach = 60  # How far past a platform's end lower ground makes that end a ledge (a knockback over it lands there)
 rope_x = 12  # How far from a rope's line it can be grabbed from
+rope_top_clear = 30  # No dropping from this close to the top of a rope hanging down from the platform: Down there grabs the rope
+# instead of falling through, and the jump after it doesn't let go without a direction: it hung at the rope's top, doing nothing
 rope_edge = 40  # Ropes usually hang just past a platform's edge: platforms ending this close beside one count as at its ends
 walk_gap = 24  # Platform pieces whose ends are this close, at about the same height, are one platform recorded in pieces
 walk_step = 12  # ... the most their heights may differ at the join (a real step, like a stair, needs a jump)
@@ -43,22 +47,25 @@ class RoutePlanner:
         self.hops = [[] for _ in lines]  # Per platform, the ways off it
         if not lines:
             return
-        x_min = min(p[0] for line in lines for p in line) - jump_reach
-        x_max = max(p[0] for line in lines for p in line) + jump_reach
+        x_min = min(p[0] for line in lines for p in line) - max_jump_reach
+        x_max = max(p[0] for line in lines for p in line) + max_jump_reach
         self.grid = np.arange(x_min, x_max + step, step)
         self.tops = np.full((len(lines), len(self.grid)), np.nan)  # Each platform's height at each grid point, NaN off it
-        reach = np.full_like(self.tops, np.nan)  # The same, held level up to jump_reach past its ends: where a jump lands on it
         self.beside = np.full_like(self.tops, np.nan)  # The same, up to rope_edge past its ends: ropes hanging by its edge
+        level = np.empty_like(self.tops)  # Each platform's height at its nearest point to each grid point: where a jump lands on it
+        apart = np.empty_like(self.tops)  # ... and how far that is sideways (0 over it)
         for i, line in enumerate(lines):
             xs, ys = [p[0] for p in line], [p[1] for p in line]
-            for heights, margin in ((self.tops, 0), (reach, jump_reach), (self.beside, rope_edge)):
+            for heights, margin in ((self.tops, 0), (self.beside, rope_edge)):
                 within = (self.grid >= xs[0] - margin) & (self.grid <= xs[-1] + margin)
                 heights[i, within] = np.interp(self.grid[within], xs, ys)
+            level[i] = np.interp(self.grid, xs, ys)  # Held level past its ends
+            apart[i] = np.maximum(0, np.maximum(xs[0] - self.grid, self.grid - xs[-1]))
         self.group = list(range(len(lines)))  # Pieces walked across as one platform share a group (see add_walks)
         self.add_walks()
         for a in range(len(lines)):
             self.add_drops(a)
-            self.add_jumps(a, reach)
+            self.add_jumps(a, level, apart)
         self.add_ropes()
 
     # --- Building the hops ---
@@ -117,16 +124,29 @@ class RoutePlanner:
             below = np.where(self.tops > here + stand_margin, self.tops, np.inf)
         lands = np.argmin(below, axis=0)
         found = np.isfinite(below.min(axis=0)) & ~np.isnan(here)
+        for ladder in self.ladders:  # Not over the top of a rope going down from here
+            column = int(round((ladder["x"] - self.grid[0]) / step))
+            if 0 <= column < len(self.grid) and not np.isnan(here[column]) and abs(here[column] - ladder["top"]) <= stand_margin:
+                found &= np.abs(self.grid - ladder["x"]) > rope_top_clear
         for b in set(lands[found].tolist()):
             for x1, x2 in self.intervals(found & (lands == b)):
                 self.hops[a].append(Hop("drop", b, x1, x2, cost=drop_time))
 
-    def add_jumps(self, a, reach):  # Jumping lands on a platform up to jump_height above, or across a gap at about the same height
+    def jump_reach(self, rise):  # How far sideways (px) a running jump carries the feet to land rise px higher (negative: lower), NaN
+        # if it can't get that high. The jump's top is jump_height: it leaves the ground at sqrt(2 g H), and lands on the way down
+        launch = np.sqrt(2 * gravity * self.jump_height)
+        with np.errstate(invalid="ignore"):
+            airborne = (launch + np.sqrt(launch * launch - 2 * gravity * rise)) / gravity
+        return walk_speed * airborne * jump_margin
+
+    def add_jumps(self, a, level, apart):  # Jumping lands on a platform up to jump_height above, or across a gap at about the same
+        # height; the higher it lands, the less far sideways it gets (~58 px across a gap, ~38 px at 70 px up, with a 75 px jump)
         here = self.tops[a]
         with np.errstate(invalid="ignore"):
-            rise = here[None, :] - reach  # How far above the feet each platform is where a jump would land on it
-            up = (rise > stand_margin) & (rise <= self.jump_height)
-            across = (np.abs(rise) <= stand_margin) & np.isnan(self.tops)  # A gap: beside a, not under the feet
+            rise = here[None, :] - level  # How far above the feet each platform is, at its nearest point
+            reach = apart <= self.jump_reach(rise)  # False where it can't get that high (NaN)
+            up = (rise > stand_margin) & (rise <= self.jump_height) & reach
+            across = (np.abs(rise) <= stand_margin) & (apart > 0) & reach  # A gap: beside a, not under the feet
         able = (up | across) & ~np.isnan(here)[None, :]
         able[a] = False
         for c in np.flatnonzero(able.any(axis=1)).tolist():
@@ -164,7 +184,7 @@ class RoutePlanner:
         return int(min(close, key=lambda i: abs(tops[i] - y))) if len(close) else None
 
     def routes(self, start, x, avoid=()):  # Quickest routes from map x on platform start to every platform it can reach:
-        # {platform: (seconds, [hops])}. avoid: platforms not to jump onto (jumps at them kept failing)
+        # {platform: (seconds, [hops])}. avoid: platforms not to jump onto and ("rope", index) of ropes not to try (they kept failing)
         best = {start: (0.0, [])}
         queue = [(0.0, start, x, [])]
         done = set()
@@ -174,7 +194,7 @@ class RoutePlanner:
                 continue
             done.add(here)
             for hop in self.hops[here]:
-                if hop.kind == "jump" and hop.to in avoid:
+                if hop.kind == "jump" and hop.to in avoid or hop.kind == "rope" and ("rope", hop.ladder) in avoid:
                     continue
                 leave = hop.leave_at(at)
                 total = cost + abs(leave - at) / walk_speed + hop.cost

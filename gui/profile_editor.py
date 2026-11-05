@@ -23,7 +23,7 @@ PROFILE_FIELDS = [
     (("keys", "jump"), "Jump key", KEYS, "Alt"),
     (("keys", "loot"), "Loot key", KEYS, "Z"),
     (("movement", "platform_range"), "Platform jump range", "int", 50),
-    (("movement", "platform_height"), "Platform jump height", "int", 100),
+    (("movement", "platform_height"), "Platform jump height", "int", 75),
     (("ranged", "keep_distance"), "Keep distance (ranged)", "int", 0),
 ]
 ATTACK_FIELDS = [

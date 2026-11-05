@@ -104,6 +104,29 @@ class MosaicTests(unittest.TestCase):
                 else:
                     self.assertIsNone(tracker.mosaic.last)  # Something is recorded: keep looking for it in the saved picture
 
+    def test_found_in_the_saved_picture_with_another_background_behind(self):  # The minimap is see-through: next session, another
+        # part of the game shows through it
+        tracker, before = self.track([(100, 60), (110, 60), (120, 64), (130, 70)])
+        tracker.save()
+        rng = np.random.default_rng(3)
+        m = view_at(118, 66)
+        behind = minimap_mosaic.art(m.area) == 0  # Only the dim parts show the scene behind; the drawing itself is opaque
+        scene = rng.integers(0, 90, m.area.shape, dtype=np.uint8)
+        m.area[behind & ~m.markers] = scene[behind & ~m.markers]
+        minimap_mosaic.Tracker().update(m)
+        self.assertEqual(m.position, before[0])
+
+    def test_a_repeating_minimap_isnt_guessed(self):  # Places alike: better to wait than to put the dot in the wrong one
+        mosaic = minimap_mosaic.Mosaic("repeating", load=False)
+        stripes = np.zeros((200, 150, 3), np.uint8)
+        stripes[::10] = (60, 200, 60)  # A platform every 10 px, all alike
+        mosaic.image, mosaic.known = stripes, np.ones(stripes.shape[:2], bool)
+        view = stripes[40:130].copy()
+        self.assertIsNone(mosaic.find_view(view, np.zeros(view.shape[:2], bool)))
+        mosaic.next_search = 0
+        stripes[95:98, 20:40] = (250, 250, 250)  # Something to tell the places apart by
+        self.assertEqual(mosaic.find_view(stripes[40:130].copy(), np.zeros(view.shape[:2], bool)), (0, 40))
+
     def test_map_change_switches_picture(self):
         tracker, _ = self.track([(100, 60)])
         other = view_at(10, 10)

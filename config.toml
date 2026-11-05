@@ -12,7 +12,6 @@ model_imgsz = 960       # Input size for yolo11; it was trained at 960. Lower is
 search_margin = [120, 80]  # Pixels (x, y) around the last nametag searched first; larger keeps fast movement on the fast path
 character_size = [50, 66]  # Approximate sprite size (width, height) drawn above the nametag
 nametag_tolerance = 0.05   # Fraction of mismatched pixels allowed when matching the nametag
-lost_grace = 1.0           # Seconds botting carries on from where the player was last seen when the nametag is covered (mobs, effects)
 
 [potion]
 cooldown = 1.0     # Seconds before the same key can be pressed again (shared when HP and MP use the same key)

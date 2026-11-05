@@ -8,7 +8,7 @@ path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 # Used for anything missing from config.toml or of the wrong type
 DEFAULTS = {
     "detection": {"stats_interval": 0.25, "player_interval": 0.05, "model_imgsz": 960},
-    "player": {"search_margin": (120, 80), "character_size": (50, 66), "nametag_tolerance": 0.05, "lost_grace": 1.0},
+    "player": {"search_margin": (120, 80), "character_size": (50, 66), "nametag_tolerance": 0.05},
     "potion": {"cooldown": 3.0, "confirm_reads": 2, "retreat_at": 1},
     "display": {"window_width": 390, "drop_display_time": 1.5, "potion_display_time": 1.5, "gui_fps": 30, "overlay_prediction": True},
     "frame_times": {"smoothing": 0.1, "stale_time": 1.0},
@@ -66,7 +66,6 @@ model_imgsz = settings["detection"]["model_imgsz"]
 search_margin = settings["player"]["search_margin"]
 character_size = settings["player"]["character_size"]
 nametag_tolerance = settings["player"]["nametag_tolerance"]
-lost_grace = settings["player"]["lost_grace"]
 potion_cooldown = settings["potion"]["cooldown"]
 potion_confirm_reads = settings["potion"]["confirm_reads"]
 retreat_at = settings["potion"]["retreat_at"]

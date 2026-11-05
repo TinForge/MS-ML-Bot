@@ -9,7 +9,7 @@ loot = "Z"
 
 [movement]
 platform_range = 50      # Distance to a platform or ladder within which the bot jumps for it
-platform_height = 100    # Highest platform the bot tries to jump onto
+platform_height = 75     # How high a jump lifts the feet (~77 px without jump bonuses): the highest platform it jumps for
 
 # Attacks are tried top to bottom; the first one that reaches the mob (and is off cooldown) is used.
 [[attacks]]

@@ -28,23 +28,27 @@ class Attack:
     min_mobs: int = 1  # Only used when at least this many mobs are in reach, e.g. a mobbing attack
     hit_range: int = None  # How far in front of the character it hits mobs, for counting min_mobs; None: range_x's maximum
 
-    def usable(self, new_target, mobs, jumping=False):  # mobs: (distance, height) of each mob on the target's side, target included
+    def usable(self, new_target, mobs, jumping=False):  # mobs: (distance, height[, feet]) of each mob on the target's side, target
+        # included (see hits)
         if self.opener and not new_target:
             return False
         if self.min_mobs > 1:
             reach = self.hits_jumping if jumping else self.hits
-            return sum(reach(d, h) for d, h in mobs) >= self.min_mobs
+            return sum(reach(*m) for m in mobs) >= self.min_mobs
         return True
 
     @property
     def reach(self):  # Farthest distance in front it hits
         return self.hit_range if self.hit_range is not None else self.range_x[1]
 
-    def hits(self, distance, height):  # Whether a mob this far in front (to its nearer edge) would be hit when aimed that way. Unlike
-        # range_x, mobs right up against the character count: range_x's minimum only keeps the bot from picking a target that close
-        return distance <= self.reach and self.range_y[0] <= height <= self.range_y[1]
+    def hits(self, distance, height, feet=None):  # Whether a mob this far in front (to its nearer edge) would be hit when aimed that
+        # way. Unlike range_x, mobs right up against the character count: range_x's minimum only keeps the bot from picking a target that
+        # close. feet: how far the mob's feet are above the player's; standing on the same ground it's hit whatever its size (height is
+        # between centres, and a tall mob's centre is far above the player's)
+        same_ground = feet is not None and abs(feet) <= same_ground_margin
+        return distance <= self.reach and (self.range_y[0] <= height <= self.range_y[1] or same_ground)
 
-    def hits_jumping(self, distance, height):
+    def hits_jumping(self, distance, height, feet=None):
         return self.jump_attack and distance <= self.reach and self.range_y[1] < height <= self.range_y[1] + self.jump_reach
 
     def reaches(self, distance, height):
@@ -52,6 +56,9 @@ class Attack:
 
     def reaches_jumping(self, distance, height):
         return self.jump_attack and self.range_x[0] <= distance <= self.range_x[1] and self.range_y[1] < height <= self.range_y[1] + self.jump_reach
+
+
+same_ground_margin = 20  # Mobs with their feet this close to the player's height stand on the same ground
 
 
 @dataclass
@@ -69,7 +76,8 @@ class Profile:
     keys: dict = field(default_factory=lambda: {"jump": "Alt", "loot": "Z"})
     mobility: list = field(default_factory=list)
     platform_range: int = 50  # Distance to a platform or ladder within which the bot jumps for it
-    platform_height: int = 100  # Highest platform the bot tries to jump onto
+    platform_height: int = 75  # How high a jump lifts the feet (~77 px in MapleStory without jump bonuses): the highest platform it
+    # jumps for, and with it how far sideways a jump carries (tools/route_planner.py)
     keep_distance: int = 0  # Ranged: back off from mobs closer than this
     gone_delay: float = 0.5  # Seconds to keep watching after a hit lands when the target shows no bar: if it's still there then, attack again
     description: str = ""
@@ -186,6 +194,6 @@ def from_dict(name, data):
 
     movement = data.get("movement", {})
     return Profile(name=name, behaviour=behaviour, attacks=attacks, keys=keys, mobility=mobility,
-                   platform_range=movement.get("platform_range", 50), platform_height=movement.get("platform_height", 100),
+                   platform_range=movement.get("platform_range", 50), platform_height=movement.get("platform_height", 75),
                    keep_distance=data.get("ranged", {}).get("keep_distance", 0), gone_delay=seconds(data.get("gone_delay", 0.5), "gone_delay"),
                    description=data.get("description", ""))

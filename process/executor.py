@@ -13,6 +13,11 @@ idle_sleep = 0.02  # Pause after an action that sends no keys (stop, wait), so t
 walk_step = 0.05  # Seconds an arrow key is held per walking tick before the bot looks again; longer overshoots the mob
 nudge_time = 0.04  # Seconds an arrow is tapped to shuffle a few pixels into place
 nudge_settle = 0.08  # Seconds to wait after a nudge, so the next look sees where it ended up
+face_lead = 0.03  # Seconds the arrow toward the mob is held before the attack key goes down, so the character has turned
+rope_hold = 1.0  # Seconds Up stays held after jumping at a rope, whatever comes next: the next actions are planned from frames where
+# the character is still in mid-air, and letting go when one of them wasn't "climb" missed the rope. Not longer: Up held while walking
+# past a portal would go through it
+KEEPS_UP = {"move", "stop", "wait", "nudge", "jump", "move_jump"}  # Actions Up can stay held through; attacks and drops let go of it
 
 
 class Executor:
@@ -25,6 +30,7 @@ class Executor:
         self.attack_last_used = {}  # Attack name: time.time() it was last used
         self.last_loot = 0  # time.time() the loot key was last pressed
         self.next_press = 0  # time.time() before which the next tap waits, like a person's fingers between taps
+        self.up_until = 0  # time.time() until which Up stays held after jumping at a rope (rope_hold)
 
     def key(self, name):  # A key bound in the profile, e.g. "jump"
         return keyboard.BIND_NAMES[self.profile.keys[name]]
@@ -32,14 +38,15 @@ class Executor:
     def run(self, action):
         direction = DIRECTIONS.get(action.direction)
         kind = action.kind
-        if kind != "climb" and not action.up:
+        if kind != "climb" and not action.up and not (kind in KEEPS_UP and time.time() < self.up_until):
             self.hold_up(False)
         if not (kind == "move" and action.jump):
             self.hold_jump(False)
-        if kind == "climb":
-            self.move(None)
+        if kind == "climb":  # Up held; with a direction, its arrow too, which walks off the rope once at the top
+            self.move(direction)
             self.hold_up(True)
-            self.pause(walk_step)
+            if direction is None:  # With an arrow held, move() waits itself
+                self.pause(walk_step)
         elif kind == "attack":
             self.move(None)
             self.attack(direction, action.attack)
@@ -67,8 +74,10 @@ class Executor:
             self.move(None)
             self.jump(up=action.up)
         elif kind == "move_jump":
-            self.move(None)
-            self.move_jump(direction, up=action.up)
+            moving = direction is not None and self.held_direction == direction  # Already walking that way: jump without stopping
+            if not moving:
+                self.move(None)
+            self.move_jump(direction, up=action.up, moving=moving)
         elif kind == "drop":
             self.move(None)
             self.drop()
@@ -104,15 +113,18 @@ class Executor:
             time.sleep(exact)
             keyboard.ReleaseKey(vk)
             return down
-        wait = self.next_press - time.time()
-        if wait > 0:
-            time.sleep(wait)
+        self.wait_turn()
         down = time.time()
         keyboard.PressKey(vk)
         time.sleep(random.uniform(*config.press_time))
         keyboard.ReleaseKey(vk)
         self.next_press = time.time() + random.uniform(*config.press_gap)
         return down
+
+    def wait_turn(self):  # With Human Key Presses on, waits out the gap a person leaves between taps
+        wait = self.next_press - time.time()
+        if values.human_input and wait > 0:
+            time.sleep(wait)
 
     def pause(self, seconds):  # A deliberate hold or wait; varied a little like a person's with Human Key Presses on
         time.sleep(seconds * random.uniform(1 - config.hold_jitter, 1 + config.hold_jitter) if values.human_input else seconds)
@@ -122,19 +134,26 @@ class Executor:
         self.pause(hold)
         keyboard.ReleaseKey(vk)
 
-    def face(self, direction):  # Turns towards the mob only when needed: every tap of an arrow key also walks a step. None: as it is
-        if direction is not None and direction != self.facing:
-            self.press(direction, 0.05)
-            self.facing = direction
-
     def attack(self, direction, attack):
-        self.face(direction)
-        self.attack_last_used[attack.name] = self.press(keyboard.BIND_NAMES[attack.key])  # From the key going down, for hit_time
+        self.attack_last_used[attack.name] = self.facing_press(direction, keyboard.BIND_NAMES[attack.key])  # From the key going down,
+        # for hit_time
 
     def jump_attack(self, direction, attack):
         self.tap(self.key("jump"), 0.4)
-        self.face(direction)
-        self.attack_last_used[attack.name] = self.press(keyboard.BIND_NAMES[attack.key])
+        self.attack_last_used[attack.name] = self.facing_press(direction, keyboard.BIND_NAMES[attack.key])
+
+    def facing_press(self, direction, vk):  # Taps vk with the arrow toward the mob held down through it, so the character faces it
+        # whichever way it faced before: the facing the bot keeps track of goes stale (knocked back, off a rope, a portal), and a lone
+        # tap to turn could be missed. Each costs a step of a few pixels. None: as it faces
+        if direction is None:
+            return self.press(vk)
+        self.wait_turn()  # Before the arrow goes down: waiting with it held would walk
+        keyboard.PressKey(direction)
+        time.sleep(face_lead)
+        down = self.press(vk)
+        keyboard.ReleaseKey(direction)
+        self.facing = direction
+        return down
 
     def use_mobility(self, direction, mobility):
         self.facing = direction
@@ -159,16 +178,20 @@ class Executor:
             keyboard.ReleaseKey(self.held_direction)
             keyboard.PressKey(direction)
             self.pause(walk_step)
-        elif self.held_direction is not None:  # continue
+        elif direction is not None and self.held_direction is None:  # start moving (this used to wait a tick before pressing anything)
+            keyboard.PressKey(direction)
+            self.pause(walk_step)
+        elif direction is not None:  # continue
             keyboard.PressKey(self.held_direction)
             self.pause(walk_step)
         self.held_direction = direction
         if direction is not None:
             self.facing = direction
 
-    def jump(self, up=False):  # up: holding Up from the start catches a rope overhead; it stays held for climbing on
+    def jump(self, up=False):  # up: holding Up from the start catches a rope overhead; it stays held for climbing on (rope_hold)
         if up:
             self.hold_up(True)
+            self.up_until = time.time() + rope_hold
         keyboard.PressKey(self.key("jump"))
         self.pause(0.25)
         keyboard.ReleaseKey(self.key("jump"))
@@ -189,16 +212,21 @@ class Executor:
         self.pause(0.2)
         keyboard.ReleaseKey(keyboard.VK_DOWN)
 
-    def move_jump(self, direction, up=False):
+    def move_jump(self, direction, up=False, moving=False):  # moving: already walking that way, up to speed: jump at once. From a
+        # standstill it gets going first, or it jumps nearly straight up; walking, that wait (with the arrow let go and pressed again)
+        # carried it ~20 px on, and running jumps at ropes caught them too late
         self.facing = direction
         keyboard.PressKey(direction)
-        self.pause(0.15)
+        if not moving:
+            self.pause(0.15)
         if up:
             self.hold_up(True)  # Stays held for climbing on, as with jump
+            self.up_until = time.time() + rope_hold
         keyboard.PressKey(self.key("jump"))
         self.pause(0.25)
         keyboard.ReleaseKey(self.key("jump"))
         keyboard.ReleaseKey(direction)
+        self.held_direction = None
         self.pause(0.4)
 
     def loot(self):

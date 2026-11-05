@@ -39,6 +39,7 @@ bot_active = False
 
 looting_active = False
 randomizer_active = False
+routing_mode = "hunt"  # Where botting goes to fight (Bot panel's Routing, process/calculations.py ROUTING): hunt, patrol or stay
 human_input = False  # Human Key Presses: bot taps timed like a person's (config.toml [input]) instead of exact and instant
 potion_active = False
 retreating = False  # Low on potions: calculations head for a safe spot instead of fighting, and the bot stops once there
@@ -69,6 +70,7 @@ debug_player = None
 debug_platform = None
 debug_mob = None
 debug_crowd = []  # (dx, dy) of each mob in the player's reach, set with debug_mob
+debug_center_dx = 0  # Attack: from the player's centre to the target's (debug_x_distance is to its nearer edge, 0 when overlapping)
 debug_x_distance = 0
 debug_y_distance = 0
 debug_direction = None
@@ -80,6 +82,7 @@ nav_jump_height = 100  # Highest platform worth jumping for, from the bot profil
 player_speed = None  # Sideways speed in px/s from the movement tracker (negative: left), None if unknown
 planned_route = None  # Map points of the route being followed across the recorded map (see RoutePlanner.path), None without one
 nav_clump_range = 0  # How far in front the profile's mobbing attack hits, 0 without one
+nav_attack_range = 75  # Farthest the profile's attacks reach (to a mob's nearer edge)
 
 debug_action = "nothing"
 debug_state = "nothing"
